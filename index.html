@@ -1,293 +1,385 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <title>Company Bingo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    * { box-sizing: border-box; }
     body {
+      margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      margin: 0;
-      background: #f5f5f5;
+      background: #f3f4f6;
+      color: #111827;
     }
-    header {
-      background: #3f51b5;
-      color: white;
-      padding: 10px 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 20px;
-    }
-    header span {
-      font-size: 14px;
-    }
-    .container {
-      max-width: 1100px;
-      margin: 16px auto 40px;
-      padding: 0 12px;
-    }
-    h2 {
-      margin-top: 20px;
-      margin-bottom: 8px;
-      font-size: 18px;
-    }
-    .card {
-      background: white;
-      border-radius: 8px;
-      padding: 12px 14px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-      margin-bottom: 16px;
-    }
-    label {
-      font-size: 14px;
-    }
-    input, button {
-      font-family: inherit;
-      font-size: 14px;
-    }
-    input[type="text"], input[type="password"] {
-      padding: 4px 6px;
-      margin: 2px 0 8px;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      min-width: 0;
-    }
+
     button {
-      padding: 6px 10px;
-      border-radius: 4px;
-      border: none;
       cursor: pointer;
-      background: #3f51b5;
-      color: white;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      padding: 4px 10px;
+      background: #fff;
+      font-size: 14px;
     }
-    button.secondary {
-      background: #777;
+    button.primary {
+      background: #2563eb;
+      border-color: #1d4ed8;
+      color: #fff;
     }
-    button.small {
-      padding: 4px 8px;
-      font-size: 12px;
+    button.danger {
+      background: #ef4444;
+      border-color: #b91c1c;
+      color: #fff;
     }
-    button:disabled {
+    button[disabled] {
       opacity: 0.5;
-      cursor: default;
+      cursor: not-allowed;
     }
-    .flex {
+
+    .hidden { display: none !important; }
+
+    .top-bar {
+      background: #111827;
+      color: #e5e7eb;
+      padding: 6px 12px;
       display: flex;
-      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .room-toggle {
+      cursor: pointer;
+      font-size: 14px;
+      color: #93c5fd;
+      text-decoration: underline;
+    }
+
+    .room-panel {
+      background: #1f2937;
+      color: #e5e7eb;
+      padding: 10px 12px 14px;
+    }
+    .room-panel label {
+      font-size: 13px;
+      display: block;
+      margin-top: 6px;
+      margin-bottom: 2px;
+    }
+    .room-panel input {
+      width: 200px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border: 1px solid #6b7280;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    .room-panel small {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    .room-actions {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
       flex-wrap: wrap;
     }
-    .flex-middle {
+
+    .main-layout {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      align-items: flex-start;
+    }
+
+    .col-left, .col-center, .col-right {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      padding: 10px;
+    }
+
+    .col-left {
+      width: 180px;
+      min-width: 180px;
+    }
+    .col-center {
+      flex: 1;
+      min-width: 0;
+    }
+    .col-right {
+      width: 330px;
+      min-width: 260px;
+    }
+
+    h2, h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      display: flex;
       align-items: center;
+      gap: 8px;
     }
-    .numbers-grid, .board-grid {
-      display: grid;
-      grid-template-columns: repeat(10, 1fr);
-      gap: 4px;
-      margin-top: 8px;
-    }
-    .board-grid {
-      grid-template-columns: repeat(5, 1fr);
-      max-width: 320px;
-    }
-    .num-cell {
-      border-radius: 4px;
-      background: #eee;
-      padding: 6px 0;
-      text-align: center;
-      cursor: pointer;
-      user-select: none;
+    .sub-title {
       font-size: 14px;
+      color: #6b7280;
     }
-    .num-cell.called {
-      background: #3f51b5;
-      color: white;
-      font-weight: bold;
-    }
-    .num-cell.mine {
-      border: 1px solid #3f51b5;
-    }
-    .num-cell.called.mine {
-      background: #ff7043;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 11px;
-      background: #eee;
-      margin-left: 6px;
-    }
-    .badge.lock {
-      background: #fdd835;
-    }
-    .room-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      max-height: 220px;
-      overflow-y: auto;
-    }
-    .room-list li {
+
+    .flex-row-between {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 4px 0;
-      border-bottom: 1px solid #eee;
+      gap: 6px;
+    }
+
+    .grid-10, .grid-5 {
+      display: grid;
+      gap: 4px;
+      margin-top: 4px;
+    }
+    .grid-10 { grid-template-columns: repeat(10, 1fr); }
+    .grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+    .num-btn {
+      padding: 6px 0;
+      text-align: center;
+      border-radius: 4px;
+      border: 1px solid #d1d5db;
+      background: #f9fafb;
       font-size: 14px;
+      user-select: none;
     }
-    .room-name {
-      font-weight: 500;
+    .num-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #1d4ed8;
     }
-    .log-panel {
-      background: #111;
-      color: #eee;
-      font-family: ui-monospace, Menlo, Consolas, "Liberation Mono", monospace;
+
+    .num-btn.disabled {
+      cursor: default;
+      opacity: 0.5;
+    }
+
+    .section {
+      margin-bottom: 10px;
+    }
+
+    .bingo-info {
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .log-box {
+      border-radius: 4px;
+      background: #111827;
+      color: #e5e7eb;
+      font-family: SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size: 12px;
-      border-radius: 6px;
-      padding: 6px 8px;
-      max-height: 220px;
+      padding: 6px;
+      height: 420px;
       overflow-y: auto;
       white-space: pre-wrap;
     }
-    .log-line {
-      margin: 1px 0;
+
+    .player-list {
+      margin-top: 4px;
     }
-    .overlay {
+    .player-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 4px;
+      padding: 3px 4px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .player-row.me {
+      background: #dbeafe;
+    }
+    .player-row.host .name {
+      font-weight: 600;
+    }
+    .player-row .name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .player-row .badge {
+      width: 20px;
+      text-align: center;
+      font-size: 12px;
+      border-radius: 999px;
+      padding: 0 4px;
+      background: #e5e7eb;
+    }
+
+    .icon {
+      font-size: 14px;
+    }
+
+    .turn-hint {
+      font-size: 14px;
+      color: #4b5563;
+      min-width: 90px;
+    }
+
+    /* 準備視窗 */
+    .modal-backdrop {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,0.45);
+      background: rgba(0,0,0,0.5);
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 20;
+      z-index: 50;
     }
     .modal {
-      background: white;
-      padding: 16px 18px;
+      background: #ffffff;
       border-radius: 8px;
-      max-width: 320px;
-      width: calc(100% - 40px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      padding: 14px;
+      width: 420px;
+      max-width: 90vw;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
     }
-    .modal h2 {
-      margin-top: 0;
-      font-size: 18px;
+    .modal h3 {
+      margin-bottom: 8px;
     }
-    .muted {
-      color: #777;
-      font-size: 12px;
-    }
-    .current-room {
+    .modal-player-row {
+      display: flex;
+      justify-content: space-between;
       font-size: 14px;
+      padding: 2px 0;
     }
-    .current-room span {
-      margin-right: 6px;
-    }
-    .bingo-count {
-      font-weight: bold;
-      color: #d32f2f;
-    }
-    @media (max-width: 600px) {
-      .numbers-grid {
-        grid-template-columns: repeat(5, 1fr);
-      }
+    .status-ready { color: #16a34a; }
+    .status-wait  { color: #f97316; }
+    .status-cancel { color:#ef4444; }
+
+    .small-text {
+      font-size: 12px;
+      color: #6b7280;
     }
   </style>
 </head>
 <body>
-<header>
-  <h1>Company Bingo</h1>
-  <span id="headerUser"></span>
-</header>
 
-<!-- 暱稱輸入 -->
-<div id="nicknameOverlay" class="overlay" style="display:none;">
-  <div class="modal">
-    <h2>先取個暱稱 👋</h2>
-    <label>暱稱（會顯示在日誌）：</label><br>
-    <input id="nicknameInput" type="text" maxlength="16" style="width:100%;" />
-    <p class="muted">只會存到這台電腦（localStorage）。</p>
-    <button id="saveNicknameBtn" style="width:100%;">進入</button>
+<div class="top-bar">
+  <div>
+    <span>公司 Bingo</span>
+  </div>
+  <div>
+    <span id="currentRoomLabel" class="small-text"></span>
+    <span id="roomToggle" class="room-toggle">顯示房間設定</span>
   </div>
 </div>
 
-<main class="container" id="app" style="display:none;">
+<div id="roomPanel" class="room-panel">
+  <label>暱稱</label>
+  <input id="nicknameInput" type="text" placeholder="輸入你的暱稱" />
 
-  <!-- 房間管理 -->
-  <section class="card">
-    <h2>房間</h2>
+  <label>房間 ID</label>
+  <input id="roomIdInput" type="text" placeholder="例如: sales-001" />
 
-    <div class="flex flex-middle" style="margin-bottom:8px;">
-      <div class="current-room" id="currentRoomInfo" style="display:none;">
-        <span>目前房間：<strong id="currentRoomName"></strong></span>
-        <span>ID：<code id="currentRoomId"></code></span>
-        <button id="leaveRoomBtn" class="small secondary">離開房間</button>
+  <label>房間密碼</label>
+  <input id="roomPasswordInput" type="password" />
+
+  <div class="room-actions">
+    <button id="createRoomBtn" class="primary">建立房間</button>
+    <button id="joinRoomBtn">加入房間</button>
+    <small id="roomInfoMsg"></small>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <div class="main-layout">
+
+    <!-- 左側：玩家排序 -->
+    <div class="col-left">
+      <div class="flex-row-between">
+        <h3>玩家排序</h3>
       </div>
-      <div id="noRoomInfo" class="muted">尚未加入任何房間</div>
+      <div class="flex-row-between" style="margin-bottom:4px;">
+        <small class="small-text">房主點玩家可設定 ①②③…</small>
+        <button id="clearOrderBtn" style="font-size:12px;padding:2px 6px;">清除排序</button>
+      </div>
+      <div id="playerList" class="player-list"></div>
     </div>
 
-    <div class="flex">
-      <!-- 建立房間 -->
-      <div style="min-width:260px;flex:1;">
-        <h3 style="margin:4px 0 4px;">建立房間</h3>
-        <label>房間名稱</label><br>
-        <input id="createRoomName" type="text" maxlength="20" style="width:100%;" /><br>
-        <label>房間密碼（可留空）</label><br>
-        <input id="createRoomPassword" type="password" maxlength="20" style="width:100%;" /><br>
-        <button id="createRoomBtn" style="margin-top:4px;">建立房間</button>
+    <!-- 中間：公共號碼 + 我的卡片 -->
+    <div class="col-center">
+
+      <!-- 公共號碼 -->
+      <div class="section">
+        <div class="flex-row-between">
+          <h2>公共號碼（1–50）</h2>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="turnHint" class="turn-hint"></span>
+            <button id="lockBtn" class="primary">鎖定</button>
+          </div>
+        </div>
+        <div class="sub-title">任何人點自己卡片上的號碼，會同步更新這裡，所有人都看得到。</div>
+        <div id="publicGrid" class="grid-10"></div>
       </div>
 
-      <!-- 已建房間列表 -->
-      <div style="min-width:260px;flex:1;">
-        <h3 style="margin:4px 0 4px;">已建立房間</h3>
-        <ul id="roomList" class="room-list">
-          <!-- 動態填入 -->
-        </ul>
-        <p class="muted">有 🔒 的代表設定了密碼，加入時會再詢問一次。</p>
+      <!-- 我的卡片 -->
+      <div class="section">
+        <div class="flex-row-between">
+          <h2>我的卡片</h2>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button id="refreshCardBtn">刷新</button>
+            <span class="bingo-info">目前 BINGO 條數：<span id="bingoCount">0</span></span>
+          </div>
+        </div>
+        <div class="sub-title">點數字＝宣告 / 取消該號碼。</div>
+        <div id="myCard" class="grid-5"></div>
       </div>
+
     </div>
-  </section>
 
-  <!-- 遊戲區域 -->
-  <section class="card" id="gameSection" style="display:none;">
-    <h2>公共號碼（1–50）</h2>
-    <p class="muted">任何人點自己卡片上的號碼，會同步更新這裡，所有人都會看到。</p>
-    <div id="calledNumbersGrid" class="numbers-grid"></div>
+    <!-- 右側：日誌 -->
+    <div class="col-right">
+      <div class="flex-row-between">
+        <h3>日誌</h3>
+      </div>
+      <div id="logBox" class="log-box"></div>
+    </div>
 
-    <h2>我的卡片</h2>
-    <p class="muted">
-      點擊方格 = 宣告 / 取消該號碼。<br>
-      目前 BINGO 條數：<span id="bingoCount" class="bingo-count">0</span>
+  </div>
+</div>
+
+<!-- 準備視窗 -->
+<div id="readyModal" class="modal-backdrop hidden">
+  <div class="modal">
+    <h3>準備開始？</h3>
+    <p class="small-text" style="margin-bottom:6px;">
+      房主鎖定後，每個人按「準備」才能開始。按「取消」會立刻中止準備。
     </p>
-    <div id="myBoardGrid" class="board-grid"></div>
-  </section>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <button id="readyBtn" class="primary" style="flex:1;">準備</button>
+      <button id="readyCancelBtn" style="flex:1;">取消</button>
+    </div>
+    <div class="small-text" style="margin-bottom:4px;">狀態：</div>
+    <div id="readyPlayerStatus"></div>
+  </div>
+</div>
 
-  <!-- 活動紀錄 -->
-  <section class="card" id="logSection" style="display:none;">
-    <h2>日誌</h2>
-    <div id="logPanel" class="log-panel"></div>
-  </section>
-</main>
-
+<!-- Firebase + 邏輯 -->
 <script type="module">
-  /********** 1. Firebase 初始化 **********/
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  // ========= Firebase 初始化 =========
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
   import {
     getDatabase,
     ref,
-    push,
     set,
-    update,
     get,
     onValue,
+    push,
+    update,
+    runTransaction,
     serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+  } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-database.js";
 
-  // ⚠️ 這裡改成你在 Firebase 控制台產生的設定（整個物件貼過來）
+  // TODO: 換成你自己的 Firebase 設定 -----------------------------
   const firebaseConfig = {
     apiKey: "AIzaSyB4IBPbuGxztyzd8E3YTitMoTt8L19MSG0",
     authDomain: "company-bingo.firebaseapp.com",
@@ -298,441 +390,573 @@
     appId: "1:844173689886:web:ac2f1888f542b138861a0f",
     measurementId: "G-WGDVJPKMEH"
   };
+  // ------------------------------------------------------------
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  const appFirebase = initializeApp(firebaseConfig);
+  const db = getDatabase(appFirebase);
 
-  /********** 2. 一些簡單的狀態 **********/
-  const headerUserEl      = document.getElementById("headerUser");
-  const appEl             = document.getElementById("app");
-  const nicknameOverlay   = document.getElementById("nicknameOverlay");
-  const nicknameInput     = document.getElementById("nicknameInput");
-  const saveNicknameBtn   = document.getElementById("saveNicknameBtn");
-
-  const roomListEl        = document.getElementById("roomList");
-  const createRoomNameEl  = document.getElementById("createRoomName");
-  const createRoomPwdEl   = document.getElementById("createRoomPassword");
-  const createRoomBtn     = document.getElementById("createRoomBtn");
-
-  const currentRoomInfoEl = document.getElementById("currentRoomInfo");
-  const noRoomInfoEl      = document.getElementById("noRoomInfo");
-  const currentRoomNameEl = document.getElementById("currentRoomName");
-  const currentRoomIdEl   = document.getElementById("currentRoomId");
-  const leaveRoomBtn      = document.getElementById("leaveRoomBtn");
-
-  const gameSectionEl     = document.getElementById("gameSection");
-  const logSectionEl      = document.getElementById("logSection");
-  const calledGridEl      = document.getElementById("calledNumbersGrid");
-  const myBoardGridEl     = document.getElementById("myBoardGrid");
-  const bingoCountEl      = document.getElementById("bingoCount");
-  const logPanelEl        = document.getElementById("logPanel");
-
-  // 伺服器上的資料路徑：
-  // rooms/{roomId}
-  //   name
-  //   hasPassword
-  //   password (簡單字串，只是防鬧，不是高安全等級)
-  //   createdAt
-  //   createdBy
-  //   calledNumbers/{num} : { by, at }
-  //   logs/{autoId} : { ts, text }
-  //   boards/{userId} : [25 個數字]
-
-  let currentRoomId   = null;
-  let currentRoomName = null;
-  let nickname        = null;
-  let userId          = null;  // 我們自己生成一個簡單 id 存在 localStorage
-  let myBoardNumbers  = [];    // 長度 25
-  let numberPosMap    = {};    // num -> {row,col,index}
-
-  let calledNumsCache = {};    // {num: true}
-  let roomsListener   = null;
-  let calledListener  = null;
-  let logsListener    = null;
-
-  /********** 3. 暱稱與本機使用者 **********/
-  function initUser() {
-    const savedNick = localStorage.getItem("bingoNickname");
-    const savedId   = localStorage.getItem("bingoUserId");
-
-    if (savedId) {
-      userId = savedId;
-    } else {
-      userId = "u_" + Math.random().toString(36).slice(2, 10);
-      localStorage.setItem("bingoUserId", userId);
-    }
-
-    if (savedNick && savedNick.trim()) {
-      nickname = savedNick.trim();
-      headerUserEl.textContent = "暱稱：" + nickname;
-      nicknameOverlay.style.display = "none";
-      appEl.style.display = "block";
-    } else {
-      nicknameOverlay.style.display = "flex";
-      appEl.style.display = "none";
-    }
+  // ========= 本地狀態 =========
+  const localUidKey = "company-bingo-uid";
+  let myUid = localStorage.getItem(localUidKey);
+  if (!myUid) {
+    myUid = "u-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(localUidKey, myUid);
   }
 
-  saveNicknameBtn.addEventListener("click", () => {
-    const name = nicknameInput.value.trim();
-    if (!name) {
-      alert("暱稱不能空白");
-      return;
-    }
-    nickname = name;
-    localStorage.setItem("bingoNickname", nickname);
-    headerUserEl.textContent = "暱稱：" + nickname;
-    nicknameOverlay.style.display = "none";
-    appEl.style.display = "block";
-  });
+  let myName = "";
+  let currentRoomId = null;
+  let isHost = false;
 
-  /********** 4. 房間列表監聽 **********/
-  function listenRooms() {
-    const roomsRef = ref(db, "rooms");
-    onValue(roomsRef, (snap) => {
-      const val = snap.val() || {};
-      roomListEl.innerHTML = "";
+  let roomMeta = {};       // {locked, hostId, prepareActive}
+  let players = {};        // {uid: {name, order, ready}}
+  let publicNumbers = {};  // {num: true}
+  let myBoard = [];        // 25 numbers
+  let unsubscribes = [];
 
-      const entries = Object.entries(val);
-      if (!entries.length) {
-        const li = document.createElement("li");
-        li.textContent = "目前沒有房間，請先建立一個。";
-        roomListEl.appendChild(li);
-        return;
-      }
+  // DOM
+  const roomPanelEl = document.getElementById("roomPanel");
+  const roomToggleEl = document.getElementById("roomToggle");
+  const nicknameInput = document.getElementById("nicknameInput");
+  const roomIdInput = document.getElementById("roomIdInput");
+  const roomPasswordInput = document.getElementById("roomPasswordInput");
+  const createRoomBtn = document.getElementById("createRoomBtn");
+  const joinRoomBtn = document.getElementById("joinRoomBtn");
+  const roomInfoMsg = document.getElementById("roomInfoMsg");
+  const currentRoomLabel = document.getElementById("currentRoomLabel");
 
-      // 照建立時間排序
-      entries.sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
+  const appEl = document.getElementById("app");
+  const publicGridEl = document.getElementById("publicGrid");
+  const myCardEl = document.getElementById("myCard");
+  const logBoxEl = document.getElementById("logBox");
+  const playerListEl = document.getElementById("playerList");
+  const clearOrderBtn = document.getElementById("clearOrderBtn");
+  const lockBtn = document.getElementById("lockBtn");
+  const refreshCardBtn = document.getElementById("refreshCardBtn");
+  const bingoCountEl = document.getElementById("bingoCount");
+  const turnHintEl = document.getElementById("turnHint");
 
-      for (const [roomId, room] of entries) {
-        const li = document.createElement("li");
+  const readyModalEl = document.getElementById("readyModal");
+  const readyBtn = document.getElementById("readyBtn");
+  const readyCancelBtn = document.getElementById("readyCancelBtn");
+  const readyPlayerStatusEl = document.getElementById("readyPlayerStatus");
 
-        const left = document.createElement("div");
-        const nameSpan = document.createElement("span");
-        nameSpan.className = "room-name";
-        nameSpan.textContent = room.name || "(未命名)";
-        left.appendChild(nameSpan);
-
-        if (room.hasPassword) {
-          const lock = document.createElement("span");
-          lock.className = "badge lock";
-          lock.textContent = "🔒 有密碼";
-          left.appendChild(lock);
-        }
-
-        const right = document.createElement("div");
-        const idSpan = document.createElement("span");
-        idSpan.className = "muted";
-        idSpan.textContent = roomId.slice(0, 6);
-        right.appendChild(idSpan);
-
-        const joinBtn = document.createElement("button");
-        joinBtn.textContent = "加入";
-        joinBtn.className = "small";
-        joinBtn.style.marginLeft = "6px";
-        joinBtn.addEventListener("click", () => joinRoomFlow(roomId, room));
-        right.appendChild(joinBtn);
-
-        li.appendChild(left);
-        li.appendChild(right);
-        roomListEl.appendChild(li);
-      }
-    });
+  // ========= 小工具 =========
+  function logLocal(message) {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const ss = String(now.getSeconds()).padStart(2, "0");
+    const line = `[${hh}:${mm}:${ss}] ${message}`;
+    logBoxEl.textContent += (logBoxEl.textContent ? "\n" : "") + line;
+    logBoxEl.scrollTop = logBoxEl.scrollHeight;
   }
 
-  async function joinRoomFlow(roomId, roomData) {
-    if (currentRoomId === roomId) return; // 已在此房
-
-    let pwdInput = "";
-    if (roomData.hasPassword) {
-      pwdInput = prompt("此房間有設定密碼，請輸入：") || "";
-      if (pwdInput !== (roomData.password || "")) {
-        alert("密碼錯誤");
-        return;
-      }
-    }
-
-    await enterRoom(roomId);
-  }
-
-  /********** 5. 建立房間 **********/
-  createRoomBtn.addEventListener("click", async () => {
-    const name = (createRoomNameEl.value || "").trim() || "未命名房間";
-    const pwd  = (createRoomPwdEl.value || "").trim();
-
-    const roomsRef = ref(db, "rooms");
-    const newRoomRef = push(roomsRef);
-
-    const roomId = newRoomRef.key;
-    await set(newRoomRef, {
-      name,
-      hasPassword: !!pwd,
-      password: pwd || null,
-      createdAt: Date.now(),
-      createdBy: nickname || "unknown"
-    });
-
-    createRoomNameEl.value = "";
-    createRoomPwdEl.value  = "";
-
-    await enterRoom(roomId);
-  });
-
-  /********** 6. 進入 / 離開房間 **********/
-  async function enterRoom(roomId) {
-    // 先讀房間資料（確認存在）
-    const roomSnap = await get(ref(db, "rooms/" + roomId));
-    if (!roomSnap.exists()) {
-      alert("房間不存在");
-      return;
-    }
-    const room = roomSnap.val();
-    currentRoomId   = roomId;
-    currentRoomName = room.name || "未命名房間";
-
-    currentRoomNameEl.textContent = currentRoomName;
-    currentRoomIdEl.textContent   = roomId;
-    currentRoomInfoEl.style.display = "inline-block";
-    noRoomInfoEl.style.display      = "none";
-    gameSectionEl.style.display     = "block";
-    logSectionEl.style.display      = "block";
-
-    // 加入房間的 log
-    await push(ref(db, `rooms/${roomId}/logs`), {
-      ts: serverTimestamp(),
-      text: `${nickname} 加入房間`
-    });
-
-    // 建出我的板子（如尚未有）
-    await ensureMyBoard(roomId);
-
-    // 設定監聽：called numbers / logs
-    setupCalledNumbersListener(roomId);
-    setupLogsListener(roomId);
-  }
-
-  leaveRoomBtn.addEventListener("click", async () => {
+  function pushLogToRoom(text) {
     if (!currentRoomId) return;
+    push(ref(db, `rooms/${currentRoomId}/logs`), {
+      text,
+      ts: Date.now()
+    }).catch(console.error);
+  }
 
-    const tmpRoomId = currentRoomId;
-    const tmpName   = currentRoomName;
+  function randomBoard() {
+    const nums = Array.from({ length: 50 }, (_, i) => i + 1);
+    for (let i = nums.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [nums[i], nums[j]] = [nums[j], nums[i]];
+    }
+    return nums.slice(0, 25);
+  }
 
-    // log 離開
-    await push(ref(db, `rooms/${tmpRoomId}/logs`), {
-      ts: serverTimestamp(),
-      text: `${nickname} 離開房間`
-    });
-
-    // 移除監聽
-    calledNumsCache = {};
-    myBoardNumbers  = [];
-    numberPosMap    = {};
-    calledGridEl.innerHTML = "";
-    myBoardGridEl.innerHTML = "";
-    logPanelEl.innerHTML   = "";
-
-    currentRoomId   = null;
-    currentRoomName = null;
-
-    currentRoomInfoEl.style.display = "none";
-    noRoomInfoEl.style.display      = "block";
-    gameSectionEl.style.display     = "none";
-    logSectionEl.style.display      = "none";
-  });
-
-  /********** 7. 建立 / 讀取我的 Bingo 卡 **********/
-  async function ensureMyBoard(roomId) {
-    const boardRef = ref(db, `rooms/${roomId}/boards/${userId}`);
-    const snap = await get(boardRef);
-    if (snap.exists()) {
-      myBoardNumbers = snap.val() || [];
-    } else {
-      // 產生 1~50 中的 25 個不重複數字
-      const all = [];
-      for (let i = 1; i <= 50; i++) all.push(i);
-      for (let i = all.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [all[i], all[j]] = [all[j], all[i]];
+  function renderPublicGrid() {
+    publicGridEl.innerHTML = "";
+    for (let i = 1; i <= 50; i++) {
+      const btn = document.createElement("div");
+      btn.className = "num-btn" + (publicNumbers[i] ? " active" : "");
+      btn.textContent = i;
+      btn.dataset.num = i;
+      if (roomMeta.locked === true && !isMyTurn()) {
+        // 如果有嚴格輪流限制可以在這裡用 disabled
       }
-      myBoardNumbers = all.slice(0, 25);
-      await set(boardRef, myBoardNumbers);
+      btn.addEventListener("click", () => handleToggleNumber(i));
+      publicGridEl.appendChild(btn);
     }
-
-    buildMyBoardGrid();
-    buildNumbersGrid(); // 公共號碼也順便畫好
   }
 
-  function buildMyBoardGrid() {
-    myBoardGridEl.innerHTML = "";
-    numberPosMap = {};
-    myBoardNumbers.forEach((num, idx) => {
-      const cell = document.createElement("div");
-      cell.className = "num-cell mine";
-      cell.textContent = num;
-      cell.dataset.num = String(num);
-      cell.dataset.index = String(idx);
-      cell.addEventListener("click", () => toggleNumber(num));
-      myBoardGridEl.appendChild(cell);
-
-      const row = Math.floor(idx / 5);
-      const col = idx % 5;
-      numberPosMap[num] = { row, col, idx };
+  function renderMyCard() {
+    myCardEl.innerHTML = "";
+    myBoard.forEach(num => {
+      const btn = document.createElement("div");
+      btn.className = "num-btn" + (publicNumbers[num] ? " active" : "");
+      btn.textContent = num;
+      btn.dataset.num = num;
+      btn.addEventListener("click", () => handleToggleNumber(num));
+      myCardEl.appendChild(btn);
     });
-
-    updateBoardHighlight();
+    updateBingoCount();
   }
 
-  function buildNumbersGrid() {
-    calledGridEl.innerHTML = "";
-    for (let num = 1; num <= 50; num++) {
-      const cell = document.createElement("div");
-      cell.className = "num-cell";
-      cell.textContent = num;
-      cell.dataset.num = String(num);
-      // 也允許直接點公共按鈕
-      cell.addEventListener("click", () => toggleNumber(num));
-      calledGridEl.appendChild(cell);
+  function calcBingo(boardNums, selected) {
+    if (boardNums.length !== 25) return 0;
+    let lines = 0;
+    const posHas = idx => selected.has(boardNums[idx]);
+    // rows
+    for (let r = 0; r < 5; r++) {
+      if ([0,1,2,3,4].every(c => posHas(r*5 + c))) lines++;
     }
-    updateNumbersGrid();
-  }
-
-  /********** 8. 號碼切換 + 寫入 DB + 日誌 **********/
-  async function toggleNumber(num) {
-    if (!currentRoomId) {
-      alert("請先加入房間");
-      return;
+    // cols
+    for (let c = 0; c < 5; c++) {
+      if ([0,1,2,3,4].every(r => posHas(r*5 + c))) lines++;
     }
-    num = Number(num);
-    const alreadyCalled = !!calledNumsCache[num];
-
-    const numRef = ref(db, `rooms/${currentRoomId}/calledNumbers/${num}`);
-    if (alreadyCalled) {
-      // 取消
-      await set(numRef, null);
-      await push(ref(db, `rooms/${currentRoomId}/logs`), {
-        ts: serverTimestamp(),
-        text: `${nickname}: 取消 ${num}`
-      });
-    } else {
-      await set(numRef, {
-        by: nickname,
-        at: serverTimestamp()
-      });
-      await push(ref(db, `rooms/${currentRoomId}/logs`), {
-        ts: serverTimestamp(),
-        text: `${nickname}: ${num}`
-      });
-    }
-  }
-
-  /********** 9. calledNumbers 監聽 & 畫面同步 **********/
-  function setupCalledNumbersListener(roomId) {
-    if (calledListener) {
-      // Realtime DB 沒有直接移除這個 onValue 的 reference，
-      // 不過我們重新指派覆蓋就好（單頁面）。
-    }
-
-    const roomCalledRef = ref(db, `rooms/${roomId}/calledNumbers`);
-    onValue(roomCalledRef, (snap) => {
-      const val = snap.val() || {};
-      calledNumsCache = {};
-      Object.keys(val).forEach((k) => {
-        calledNumsCache[Number(k)] = true;
-      });
-      updateNumbersGrid();
-      updateBoardHighlight();
-      updateBingoCount();
-    });
-  }
-
-  function updateNumbersGrid() {
-    const cells = calledGridEl.querySelectorAll(".num-cell");
-    cells.forEach((cell) => {
-      const num = Number(cell.dataset.num);
-      if (calledNumsCache[num]) {
-        cell.classList.add("called");
-      } else {
-        cell.classList.remove("called");
-      }
-    });
-  }
-
-  function updateBoardHighlight() {
-    const cells = myBoardGridEl.querySelectorAll(".num-cell");
-    cells.forEach((cell) => {
-      const num = Number(cell.dataset.num);
-      if (calledNumsCache[num]) {
-        cell.classList.add("called");
-      } else {
-        cell.classList.remove("called");
-      }
-    });
+    // diag 1
+    if ([0,1,2,3,4].every(i => posHas(i*6))) lines++;
+    // diag 2
+    if ([0,1,2,3,4].every(i => posHas((i+1)*4))) lines++;
+    return lines;
   }
 
   function updateBingoCount() {
-    if (!myBoardNumbers.length) {
-      bingoCountEl.textContent = "0";
+    const sel = new Set(Object.keys(publicNumbers).filter(k => publicNumbers[k]).map(n => +n));
+    const cnt = calcBingo(myBoard, sel);
+    bingoCountEl.textContent = cnt;
+  }
+
+  function renderPlayers() {
+    playerListEl.innerHTML = "";
+    const entries = Object.entries(players);
+    // 排序：有 order 的照 order，小的在上；沒有 order 的放後面
+    entries.sort((a, b) => {
+      const pa = a[1];
+      const pb = b[1];
+      const oa = pa.order || 9999;
+      const ob = pb.order || 9999;
+      if (oa !== ob) return oa - ob;
+      return (pa.name || "").localeCompare(pb.name || "");
+    });
+
+    entries.forEach(([uid, p]) => {
+      const row = document.createElement("div");
+      row.classList.add("player-row");
+      if (uid === myUid) row.classList.add("me");
+      if (uid === roomMeta.hostId) row.classList.add("host");
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "icon";
+      iconSpan.textContent = uid === roomMeta.hostId ? "👑" : "👤";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "name";
+      nameSpan.textContent = p.name || "(未命名)";
+
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = p.order ? `⓵⓶⓷⓸⓹⓺⓻⓼⓽⓾`.charAt(p.order - 1) || p.order : "";
+
+      row.appendChild(iconSpan);
+      row.appendChild(nameSpan);
+      row.appendChild(badge);
+
+      // 只有房主能設定排序
+      if (isHost && !roomMeta.locked) {
+        row.addEventListener("click", () => togglePlayerOrder(uid));
+      } else {
+        row.style.cursor = "default";
+      }
+      playerListEl.appendChild(row);
+    });
+
+    renderTurnHint();
+  }
+
+  function getUsedOrders() {
+    const used = new Set();
+    Object.values(players).forEach(p => {
+      if (p.order) used.add(p.order);
+    });
+    return used;
+  }
+
+  function nextAvailableOrder() {
+    const used = getUsedOrders();
+    let i = 1;
+    while (used.has(i)) i++;
+    return i;
+  }
+
+  function togglePlayerOrder(uid) {
+    const p = players[uid];
+    if (!p) return;
+    // 取消 → 設為 null
+    let newOrder = null;
+    if (!p.order) {
+      newOrder = nextAvailableOrder();
+    }
+    update(ref(db, `rooms/${currentRoomId}/players/${uid}`), { order: newOrder });
+  }
+
+  function isMyTurn() {
+    // 根據公共號碼已選個數＆排序決定現在輪到誰
+    const ordered = Object.entries(players)
+      .filter(([id, p]) => !!p.order)
+      .sort((a,b)=> (a[1].order||0)-(b[1].order||0));
+    if (ordered.length === 0) return false;
+    const selectedCount = Object.values(publicNumbers).filter(Boolean).length;
+    const idx = selectedCount % ordered.length; // 0-based
+    const uid = ordered[idx][0];
+    return uid === myUid;
+  }
+
+  function renderTurnHint() {
+    const ordered = Object.entries(players)
+      .filter(([id, p]) => !!p.order)
+      .sort((a,b)=> (a[1].order||0)-(b[1].order||0));
+    if (ordered.length === 0) {
+      turnHintEl.textContent = "尚未設定排序";
+      return;
+    }
+    const selectedCount = Object.values(publicNumbers).filter(Boolean).length;
+    const idx = selectedCount % ordered.length;
+    const [uid, p] = ordered[idx];
+    turnHintEl.textContent = roomMeta.locked ? `${p.name} 請選號` : "尚未鎖定";
+  }
+
+  function setRoomMetaPartial(obj) {
+    if (!currentRoomId) return;
+    update(ref(db, `rooms/${currentRoomId}/meta`), obj);
+  }
+
+  // ========= 事件：切換號碼 =========
+  function handleToggleNumber(num) {
+    if (!currentRoomId) return;
+    // 鎖定時可以限制只有輪到的人能按（若你要更嚴格的話）
+    if (roomMeta.locked && !isMyTurn()) {
+      // 只是提示，不阻止也可以
+      // alert("現在不是你的回合喔");
+      return;
+    }
+    const numRef = ref(db, `rooms/${currentRoomId}/publicNumbers/${num}`);
+    runTransaction(numRef, (prev) => {
+      const newVal = !prev;
+      return newVal;
+    }).then(res => {
+      const after = res.snapshot.val();
+      const verb = after ? `${myName}: ${num}` : `${myName}: 取消 ${num}`;
+      pushLogToRoom(verb);
+    }).catch(console.error);
+  }
+
+  // ========= 房間建立 / 加入 =========
+  async function createRoom() {
+    myName = (nicknameInput.value || "").trim();
+    const roomId = (roomIdInput.value || "").trim();
+    const pwd = roomPasswordInput.value || "";
+
+    if (!myName) { alert("請輸入暱稱"); return; }
+    if (!roomId) { alert("請輸入房間 ID"); return; }
+
+    const roomMetaRef = ref(db, `rooms/${roomId}/meta`);
+    const snap = await get(roomMetaRef);
+    if (snap.exists()) {
+      alert("此房間已存在，請改用加入房間。");
       return;
     }
 
-    const hit = myBoardNumbers.map((num) => !!calledNumsCache[num]);
-    let lines = 0;
-
-    // 橫向
-    for (let r = 0; r < 5; r++) {
-      let ok = true;
-      for (let c = 0; c < 5; c++) {
-        if (!hit[r * 5 + c]) { ok = false; break; }
-      }
-      if (ok) lines++;
-    }
-    // 直向
-    for (let c = 0; c < 5; c++) {
-      let ok = true;
-      for (let r = 0; r < 5; r++) {
-        if (!hit[r * 5 + c]) { ok = false; break; }
-      }
-      if (ok) lines++;
-    }
-    // 斜線
-    let ok = true;
-    for (let i = 0; i < 5; i++) {
-      if (!hit[i * 5 + i]) { ok = false; break; }
-    }
-    if (ok) lines++;
-
-    ok = true;
-    for (let i = 0; i < 5; i++) {
-      if (!hit[i * 5 + (4 - i)]) { ok = false; break; }
-    }
-    if (ok) lines++;
-
-    bingoCountEl.textContent = String(lines);
-  }
-
-  /********** 10. 日誌監聽 **********/
-  function setupLogsListener(roomId) {
-    const logsRef = ref(db, `rooms/${roomId}/logs`);
-    onValue(logsRef, (snap) => {
-      const val = snap.val() || {};
-      const entries = Object.entries(val);
-      entries.sort((a,b) => (a[1].ts || 0) - (b[1].ts || 0));
-      logPanelEl.innerHTML = "";
-
-      for (const [, log] of entries) {
-        const div = document.createElement("div");
-        div.className = "log-line";
-        const ts = log.ts ? new Date(log.ts).toLocaleTimeString() : "";
-        div.textContent = ts ? `[${ts}] ${log.text}` : log.text;
-        logPanelEl.appendChild(div);
-      }
-      logPanelEl.scrollTop = logPanelEl.scrollHeight;
+    // 建房
+    await set(roomMetaRef, {
+      hostId: myUid,
+      password: pwd,
+      locked: false,
+      prepareActive: false,
+      createdAt: serverTimestamp()
     });
+
+    await set(ref(db, `rooms/${roomId}/players/${myUid}`), {
+      name: myName,
+      order: null,
+      ready: null
+    });
+
+    await set(ref(db, `rooms/${roomId}/boards/${myUid}`), {
+      nums: randomBoard()
+    });
+
+    currentRoomId = roomId;
+    isHost = true;
+    afterJoinRoom();
+    pushLogToRoom(`${myName} 建立房間`);
   }
 
-  /********** 11. 啟動 **********/
-  initUser();
-  listenRooms();
+  async function joinRoom() {
+    myName = (nicknameInput.value || "").trim();
+    const roomId = (roomIdInput.value || "").trim();
+    const pwd = roomPasswordInput.value || "";
+
+    if (!myName) { alert("請輸入暱稱"); return; }
+    if (!roomId) { alert("請輸入房間 ID"); return; }
+
+    const roomMetaRef = ref(db, `rooms/${roomId}/meta`);
+    const snap = await get(roomMetaRef);
+    if (!snap.exists()) {
+      alert("房間不存在，請確認 ID。");
+      return;
+    }
+    const meta = snap.val();
+    if ((meta.password || "") !== pwd) {
+      alert("房間密碼錯誤。");
+      return;
+    }
+
+    await update(roomMetaRef, { }); // 確保存在
+
+    // 玩家資料
+    await set(ref(db, `rooms/${roomId}/players/${myUid}`), {
+      name: myName,
+      order: null,
+      ready: null
+    });
+
+    // 若之前沒有 board 幫他生一張
+    const boardRef = ref(db, `rooms/${roomId}/boards/${myUid}`);
+    const boardSnap = await get(boardRef);
+    if (!boardSnap.exists()) {
+      await set(boardRef, { nums: randomBoard() });
+    }
+
+    currentRoomId = roomId;
+    isHost = meta.hostId === myUid;
+    afterJoinRoom();
+    pushLogToRoom(`${myName} 加入房間`);
+  }
+
+  function clearListeners() {
+    unsubscribes.forEach(unsub => unsub && unsub());
+    unsubscribes = [];
+  }
+
+  function afterJoinRoom() {
+    roomInfoMsg.textContent = "";
+    appEl.classList.remove("hidden");
+    currentRoomLabel.textContent = `房間：${currentRoomId}　暱稱：${myName}`;
+    // 加入成功後縮起房間設定
+    roomPanelEl.classList.add("hidden");
+    roomToggleEl.textContent = "顯示房間設定";
+
+    clearListeners();
+    subscribeRoom();
+  }
+
+  // ========= 監聽房間資料 =========
+  function subscribeRoom() {
+    if (!currentRoomId) return;
+
+    // meta
+    unsubscribes.push(
+      onValue(ref(db, `rooms/${currentRoomId}/meta`), snap => {
+        roomMeta = snap.val() || {};
+        isHost = roomMeta.hostId === myUid;
+        lockBtn.textContent = roomMeta.locked ? "取消鎖定" : "鎖定";
+        // 鎖定時關閉刷新 & 排序
+        refreshCardBtn.disabled = !!roomMeta.locked;
+        clearOrderBtn.disabled = !!roomMeta.locked;
+        renderPlayers();
+      })
+    );
+
+    // players
+    unsubscribes.push(
+      onValue(ref(db, `rooms/${currentRoomId}/players`), snap => {
+        players = snap.val() || {};
+        renderPlayers();
+        renderReadyStatus();
+      })
+    );
+
+    // public numbers
+    unsubscribes.push(
+      onValue(ref(db, `rooms/${currentRoomId}/publicNumbers`), snap => {
+        publicNumbers = snap.val() || {};
+        renderPublicGrid();
+        renderMyCard();
+        renderTurnHint();
+      })
+    );
+
+    // my board
+    unsubscribes.push(
+      onValue(ref(db, `rooms/${currentRoomId}/boards/${myUid}/nums`), snap => {
+        const arr = snap.val();
+        if (Array.isArray(arr) && arr.length === 25) {
+          myBoard = arr;
+        } else {
+          myBoard = randomBoard();
+        }
+        renderMyCard();
+      })
+    );
+
+    // logs
+    unsubscribes.push(
+      onValue(ref(db, `rooms/${currentRoomId}/logs`), snap => {
+        const val = snap.val() || {};
+        const list = Object.values(val).sort((a,b)=> (a.ts||0)-(b.ts||0));
+        logBoxEl.textContent = "";
+        list.forEach(entry => logLocal(entry.text));
+      })
+    );
+
+    // 準備狀態
+    unsubscribes.push(
+      onValue(ref(db, `rooms/${currentRoomId}/meta/prepareActive`), snap => {
+        const active = !!snap.val();
+        if (active) {
+          showReadyModal();
+        } else {
+          hideReadyModal();
+        }
+      })
+    );
+  }
+
+  // ========= 準備相關 =========
+  function showReadyModal() {
+    readyModalEl.classList.remove("hidden");
+    renderReadyStatus();
+  }
+  function hideReadyModal() {
+    readyModalEl.classList.add("hidden");
+  }
+
+  function renderReadyStatus() {
+    if (!currentRoomId) return;
+    const rows = [];
+    Object.entries(players).forEach(([uid,p]) => {
+      const row = document.createElement("div");
+      row.className = "modal-player-row";
+      const left = document.createElement("span");
+      left.textContent = (uid === roomMeta.hostId ? "👑 " : "👤 ") + (p.name || "");
+      const right = document.createElement("span");
+      const st = p.ready || "waiting";
+      if (st === "ready") {
+        right.textContent = "已準備";
+        right.className = "status-ready";
+      } else if (st === "cancel") {
+        right.textContent = "取消";
+        right.className = "status-cancel";
+      } else {
+        right.textContent = "等候準備";
+        right.className = "status-wait";
+      }
+      row.appendChild(left);
+      row.appendChild(right);
+      rows.push(row);
+    });
+    readyPlayerStatusEl.innerHTML = "";
+    rows.forEach(r => readyPlayerStatusEl.appendChild(r));
+
+    // 若所有人 ready → 房主啟動鎖定
+    const arr = Object.values(players);
+    if (arr.length > 0 && arr.every(p => p.ready === "ready")) {
+      if (isHost && roomMeta.prepareActive) {
+        // 啟動鎖定
+        setRoomMetaPartial({ locked: true, prepareActive: false });
+        pushLogToRoom("所有人已準備，遊戲開始");
+      }
+    }
+  }
+
+  readyBtn.addEventListener("click", () => {
+    if (!currentRoomId) return;
+    update(ref(db, `rooms/${currentRoomId}/players/${myUid}`), { ready: "ready" });
+  });
+
+  readyCancelBtn.addEventListener("click", () => {
+    if (!currentRoomId) return;
+    update(ref(db, `rooms/${currentRoomId}/players/${myUid}`), { ready: "cancel" });
+    setRoomMetaPartial({ prepareActive: false });
+    pushLogToRoom(`${myName}: 你們先別急`);
+  });
+
+  // ========= UI 事件 =========
+  createRoomBtn.addEventListener("click", () => {
+    createRoom().catch(err => {
+      console.error(err);
+      alert("建立房間失敗，請看 console。");
+    });
+  });
+
+  joinRoomBtn.addEventListener("click", () => {
+    joinRoom().catch(err => {
+      console.error(err);
+      alert("加入房間失敗，請看 console。");
+    });
+  });
+
+  roomToggleEl.addEventListener("click", () => {
+    const hidden = roomPanelEl.classList.toggle("hidden");
+    roomToggleEl.textContent = hidden ? "顯示房間設定" : "隱藏房間設定";
+  });
+
+  clearOrderBtn.addEventListener("click", () => {
+    if (!isHost) return;
+    if (!currentRoomId) return;
+    const updates = {};
+    Object.keys(players).forEach(uid => {
+      updates[`rooms/${currentRoomId}/players/${uid}/order`] = null;
+    });
+    update(ref(db), updates);
+  });
+
+  refreshCardBtn.addEventListener("click", () => {
+    if (!currentRoomId) return;
+    if (roomMeta.locked) return;
+    const newBoard = randomBoard();
+    set(ref(db, `rooms/${currentRoomId}/boards/${myUid}/nums`), newBoard);
+    pushLogToRoom(`${myName} 刷新卡片`);
+  });
+
+  lockBtn.addEventListener("click", () => {
+    if (!isHost) {
+      alert("只有房主可以鎖定 / 取消鎖定。");
+      return;
+    }
+    if (!currentRoomId) return;
+
+    if (!roomMeta.locked) {
+      // 要鎖定 → 先檢查排序
+      const allPlayers = Object.values(players);
+      if (allPlayers.length === 0) {
+        alert("沒有玩家，無法鎖定。");
+        return;
+      }
+      const hasUnordered = allPlayers.some(p => !p.order);
+      if (hasUnordered) {
+        alert("請先為所有玩家設定左側的順位排序。");
+        return;
+      }
+      // 啟動準備階段
+      const updates = {};
+      Object.keys(players).forEach(uid => {
+        updates[`rooms/${currentRoomId}/players/${uid}/ready`] = "waiting";
+      });
+      updates[`rooms/${currentRoomId}/meta/prepareActive`] = true;
+      update(ref(db), updates);
+      pushLogToRoom("房主啟動準備流程");
+    } else {
+      // 取消鎖定 → 結束一局
+      if (!confirm("是否結束此局並清除所有公共號碼？")) return;
+      const updates = {};
+      updates[`rooms/${currentRoomId}/meta/locked`] = false;
+      updates[`rooms/${currentRoomId}/meta/prepareActive`] = false;
+      updates[`rooms/${currentRoomId}/publicNumbers`] = null;
+      update(ref(db), updates);
+      pushLogToRoom("房主取消鎖定並清空公共號碼");
+    }
+  });
+
+  // 離開頁面時簡單紀錄一下（這裡就不刪玩家資料了，避免誤刪）
+  window.addEventListener("beforeunload", () => {
+    // 你如果想離開就刪掉玩家，可以在這裡 update / remove
+  });
+
 </script>
 </body>
 </html>
