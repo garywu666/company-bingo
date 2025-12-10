@@ -1,117 +1,291 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Company Bingo</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body{font-family:sans-serif;max-width:960px;margin:auto;padding:16px}
-    h1{text-align:center}
-    .box{border:1px solid #ccc;border-radius:8px;padding:12px;margin-top:12px}
-    .nums{display:flex;flex-wrap:wrap}
-    .nums button{width:44px;height:44px;margin:3px;border:1px solid #666;border-radius:6px;cursor:pointer}
-    .nums button.used{background:#2196f3;color:#fff;cursor:not-allowed}
-    .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
-    .cell{border:1px solid #999;border-radius:6px;padding:12px;text-align:center;cursor:pointer}
-    .cell.mark{background:#4caf50;color:#fff}
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      margin: 0;
+      padding: 16px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .hint {
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+    .layout {
+      max-width: 960px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 16px;
+    }
+    @media (max-width: 768px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .card, .panel {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08);
+      padding: 16px;
+    }
+    .card-title, .panel-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      font-size: 16px;
+    }
+    .bingo-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 4px;
+    }
+    .cell {
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      text-align: center;
+      padding: 10px 0;
+      font-size: 18px;
+      user-select: none;
+      transition: all .15s ease;
+      background: #fafafa;
+    }
+    .cell.hit {
+      background: #4caf50;
+      color: #fff;
+      border-color: #388e3c;
+      transform: scale(1.03);
+    }
+    .numbers-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .num-btn {
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      padding: 6px 0;
+      font-size: 14px;
+      cursor: pointer;
+      background: #fff;
+      transition: all .12s ease;
+    }
+    .num-btn:hover {
+      background: #eee;
+    }
+    .num-btn.active {
+      background: #1976d2;
+      color: #fff;
+      border-color: #115293;
+    }
+    .panel-footer {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      color: #555;
+    }
+    .btn-reset {
+      border: none;
+      background: #e53935;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .btn-reset:hover {
+      background: #c62828;
+    }
+    .status {
+      font-size: 13px;
+      color: #777;
+    }
   </style>
 </head>
 <body>
-<h1>公司 Bingo 遊戲</h1>
+  <h1>公司 Bingo</h1>
+  <div class="hint">
+    任何人點右邊「叫號 1–50」按鈕，<b>全公司的人</b>畫面會一起同步更新
+  </div>
 
-<div class="box">
-  房間代碼：
-  <input id="room" placeholder="例如 HR2025">
-  <button onclick="join()">加入房間</button>
-</div>
+  <div class="layout">
+    <!-- 左邊：每個人自己的 Bingo 牌 -->
+    <section class="card">
+      <div class="card-title">你的 Bingo 牌（每台電腦 / 手機各自隨機）</div>
+      <div id="bingoBoard" class="bingo-grid"></div>
+    </section>
 
-<div class="box">
-  <h3>公共報號（1～50）</h3>
-  <div id="nums" class="nums"></div>
-  <p>已報：<span id="list"></span></p>
-</div>
+    <!-- 右邊：公共叫號按鈕 -->
+    <section class="panel">
+      <div class="panel-title">公共叫號（1 ~ 50）</div>
+      <div id="numbersPanel" class="numbers-grid"></div>
+      <div class="panel-footer">
+        <button id="resetBtn" class="btn-reset">清空全部叫號</button>
+        <div id="status" class="status">尚未連線…</div>
+      </div>
+    </section>
+  </div>
 
-<div class="box">
-  <h3>我的 Bingo 卡</h3>
-  <button onclick="gen()">生成 / 刷新</button>
-  <div id="card" class="grid"></div>
-</div>
+  <!-- Firebase + 邏輯 -->
+  <script type="module">
+    /********************* 1. 填入你的 Firebase 設定 ************************/
+    // ⚠️ 把下面這一段換成你在 Firebase 主控台看到的 firebaseConfig
+    //    （就是你剛剛貼給我的那整包設定）
+    const firebaseConfig = {
+      apiKey: "AIzaSyB4IBPbuGxztyzd8E3YTitMoTt8L19MSG0",
+      authDomain: "company-bingo.firebaseapp.com",
+      databaseURL: "https://company-bingo-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "company-bingo",
+      storageBucket: "company-bingo.firebasestorage.app",
+      messagingSenderId: "844173689886",
+      appId: "1:844173689886:web:ac2f1888f542b138861a0f",
+      measurementId: "G-WGDVJPKMEH"
+    };
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-<script>
-const firebaseConfig = {
-  apiKey: "AIzaSyB4IBPbuGxztyzd8E3YTitMoTt8L19MSG0",
-  authDomain: "company-bingo.firebaseapp.com",
-  databaseURL: "https://company-bingo-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "company-bingo",
-  storageBucket: "company-bingo.firebasestorage.app",
-  messagingSenderId: "844173689886",
-  appId: "1:844173689886:web:ac2f1888f542b138861a0f",
-  measurementId: "G-WGDVJPKMEH"
-};
+    /********************* 2. 連線到 Firebase Realtime Database ************/
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import {
+      getDatabase,
+      ref,
+      onValue,
+      set,
+      remove
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
 
-firebase.initializeApp(firebaseConfig);
-const db=firebase.database();
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
 
-let room="",called=[],my=[];
+    const CALLED_PATH = "calledNumbers"; // 叫號儲存的節點
 
-/* 公共號碼 */
-const nums=document.getElementById("nums");
-for(let i=1;i<=50;i++){
-  let b=document.createElement("button");
-  b.textContent=i;
-  b.onclick=()=>call(i);
-  nums.appendChild(b);
-}
+    /********************* 3. 產生每個人的 Bingo 牌 ***********************/
+    const ROWS = 5;
+    const COLS = 5;
+    const MAX_NUM = 50;
 
-function join(){
-  room=document.getElementById("room").value;
-  if(!room)return alert("請輸入房間代碼");
-  db.ref("rooms/"+room).on("value",s=>{
-    called=s.val()||[];
-    update();
-  });
-}
+    function loadOrCreateBoard() {
+      const saved = localStorage.getItem("company-bingo-board");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (_) {}
+      }
 
-function call(n){
-  if(called.includes(n))return;
-  called.push(n);
-  called.sort((a,b)=>a-b);
-  db.ref("rooms/"+room).set(called);
-}
+      const all = [];
+      for (let i = 1; i <= MAX_NUM; i++) all.push(i);
+      all.sort(() => Math.random() - 0.5);
 
-function update(){
-  [...nums.children].forEach(b=>{
-    let n=+b.textContent;
-    b.className=called.includes(n)?"used":"";
-  });
-  document.getElementById("list").textContent=called.join(",");
-  mark();
-}
+      const board = [];
+      let idx = 0;
+      for (let r = 0; r < ROWS; r++) {
+        const row = [];
+        for (let c = 0; c < COLS; c++) {
+          row.push(all[idx++]);
+        }
+        board.push(row);
+      }
+      localStorage.setItem("company-bingo-board", JSON.stringify(board));
+      return board;
+    }
 
-/* Bingo 卡 */
-function gen(){
-  let pool=[...Array(50)].map((_,i)=>i+1);
-  my=[];
-  while(my.length<25){
-    my.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
-  }
-  const c=document.getElementById("card"); c.innerHTML="";
-  my.forEach(n=>{
-    let d=document.createElement("div");
-    d.textContent=n;
-    d.className="cell";
-    d.onclick=()=>d.classList.toggle("mark");
-    c.appendChild(d);
-  });
-}
+    const boardData = loadOrCreateBoard();
+    const boardEl = document.getElementById("bingoBoard");
 
-function mark(){
-  document.querySelectorAll(".cell").forEach(c=>{
-    if(called.includes(+c.textContent))c.classList.add("mark");
-  });
-}
-</script>
+    function renderBoard(calledSet) {
+      boardEl.innerHTML = "";
+      boardData.forEach(row => {
+        row.forEach(num => {
+          const div = document.createElement("div");
+          div.className = "cell";
+          div.textContent = num;
+          div.dataset.num = num;
+          if (calledSet.has(num)) div.classList.add("hit");
+          boardEl.appendChild(div);
+        });
+      });
+    }
+
+    /********************* 4. 公共叫號按鈕 *******************************/
+    const numbersPanel = document.getElementById("numbersPanel");
+    const statusEl = document.getElementById("status");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const numButtons = new Map();
+    let calledSet = new Set();
+
+    function renderButtons() {
+      numbersPanel.innerHTML = "";
+      for (let i = 1; i <= MAX_NUM; i++) {
+        const btn = document.createElement("button");
+        btn.className = "num-btn";
+        btn.textContent = i;
+        btn.dataset.num = i;
+
+        btn.addEventListener("click", () => {
+          toggleNumber(i);
+        });
+
+        numbersPanel.appendChild(btn);
+        numButtons.set(i, btn);
+      }
+    }
+
+    async function toggleNumber(num) {
+      const numRef = ref(db, `${CALLED_PATH}/${num}`);
+      if (calledSet.has(num)) {
+        // 已經叫過 -> 取消叫號
+        await remove(numRef);
+      } else {
+        // 還沒叫過 -> 新增叫號
+        await set(numRef, true);
+      }
+    }
+
+    resetBtn.addEventListener("click", async () => {
+      if (!confirm("確定要清空所有叫號嗎？")) return;
+      await remove(ref(db, CALLED_PATH));
+    });
+
+    /********************* 5. 即時同步叫號 *******************************/
+    function applyCalledSet(newSet) {
+      calledSet = newSet;
+
+      // 更新公共按鈕
+      for (const [num, btn] of numButtons.entries()) {
+        if (calledSet.has(num)) btn.classList.add("active");
+        else btn.classList.remove("active");
+      }
+
+      // 更新個人 Bingo 牌
+      renderBoard(calledSet);
+
+      statusEl.textContent = `目前已叫號：${calledSet.size} 個`;
+    }
+
+    // 監聽 Realtime Database 的叫號變化
+    onValue(ref(db, CALLED_PATH), (snapshot) => {
+      const data = snapshot.val() || {};
+      const newSet = new Set(Object.keys(data).map(n => parseInt(n, 10)));
+      applyCalledSet(newSet);
+    });
+
+    /********************* 6. 初始化畫面 *******************************/
+    renderButtons();
+    renderBoard(new Set());
+    statusEl.textContent = "連線中…";
+  </script>
 </body>
 </html>
