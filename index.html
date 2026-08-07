@@ -94,7 +94,7 @@
 </div>
 
 <div class="topbar">
-  <b>Company Bingo</b>
+  <b>Company Bingo <span id="versionTag" style="font-size:11px;color:#6b7280;font-weight:400;"></span></b>
   <div class="right">
     <span id="roomLabel"></span>
     <button id="leaveRoomBtn" class="small hidden">離開房間</button>
@@ -186,6 +186,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = getAuth(app);
+
+/* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
+const APP_VERSION = "v26.8.8.2";
+document.getElementById("versionTag").textContent = APP_VERSION;
+console.log("Company Bingo", APP_VERSION);
 
 /* ===== 密碼雜湊（僅做基本遮蔽，不是高安全等級） ===== */
 async function sha256(text) {
@@ -498,7 +503,9 @@ function maybeClaimHost() {
   const hostPlayer = players[roomMeta.hostId];
   const iAmOnline = players[myUid] && players[myUid].online === true;
   if (!iAmOnline) return;
-  if (hostPlayer && hostPlayer.online !== true) {
+  // 房主離線，或房主的玩家資料已經完全不存在（例如主動離開房間），都視為需要轉移
+  const hostNeedsMigration = !hostPlayer || hostPlayer.online !== true;
+  if (hostNeedsMigration) {
     const onlineList = Object.entries(players).filter(([, p]) => p.online === true);
     if (!onlineList.length) return;
     onlineList.sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0));
@@ -509,7 +516,7 @@ function maybeClaimHost() {
         if (curr === oldHost) return myUid;
         return; // 已被其他人搶先轉移，放棄
       }).then(res => {
-        if (res.committed) pushLog(`${myName} 自動成為新房主（原房主離線）`);
+        if (res.committed) pushLog(`${myName} 自動成為新房主（原房主已離開）`);
       });
     }
   }
