@@ -158,6 +158,18 @@
     opacity:0;transition:opacity .3s ease, transform .3s ease;pointer-events:none;
   }
   .start-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* 輪到自己時的全螢幕提示邊框 */
+  body.my-turn::after{
+    content:"";
+    position:fixed;inset:0;pointer-events:none;z-index:90;
+    box-shadow:inset 0 0 0 6px var(--coral);
+    animation:turnPulse 1.3s ease-in-out infinite;
+  }
+  @keyframes turnPulse{
+    0%,100%{box-shadow:inset 0 0 0 5px var(--coral);}
+    50%{box-shadow:inset 0 0 0 11px var(--coral);}
+  }
 </style>
 </head>
 <body>
@@ -274,7 +286,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.9";
+const APP_VERSION = "v26.8.8.11";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -551,6 +563,7 @@ function showLobby() {
   leaveRoomBtn.classList.add("hidden");
   toggleLobbyBtn.textContent = "收合房間設定";
   roomLabelEl.textContent = "";
+  document.body.classList.remove("my-turn");
 }
 function showGame() {
   lobbySection.classList.add("hidden");
@@ -892,6 +905,7 @@ function renderTurnHint() {
     turnHintEl.className = "turn-hint idle";
     turnHintEl.textContent = state === "preparing" ? "準備中…" : "尚未開始";
     skipTurnBtn.classList.add("hidden");
+    document.body.classList.remove("my-turn");
     return;
   }
   const uid = currentTurnUid();
@@ -899,6 +913,7 @@ function renderTurnHint() {
   turnHintEl.className = "turn-hint";
   turnHintEl.textContent = p ? `🌟 ${p.name}，請選號 🌟` : "";
   skipTurnBtn.classList.toggle("hidden", !(isHost && p && p.online !== true));
+  document.body.classList.toggle("my-turn", uid === myUid);
 }
 skipTurnBtn.addEventListener("click", async () => {
   if (!isHost || !currentRoomId) return;
@@ -912,51 +927,47 @@ skipTurnBtn.addEventListener("click", async () => {
 function isMyTurn() {
   return (roomMeta.gameState === "playing") && currentTurnUid() === myUid;
 }
+/* 統一的可點擊判斷：號碼一旦叫出就不可再變動；尚未叫出的話，只有輪到我才能叫 */
+function canClickNumber(n) {
+  if (roomMeta.gameState !== "playing") return false;
+  if (calledNumbers[n]) return false;
+  return isMyTurn();
+}
 function renderPublicGrid() {
   publicGridEl.innerHTML = "";
-  const state = roomMeta.gameState || "lobby";
   for (let n = 1; n <= 50; n++) {
     const btn = document.createElement("button");
     btn.className = "num-btn" + (calledNumbers[n] ? " active" : "");
     btn.textContent = n;
-    const canClick = state === "playing" && (isMyTurn() || (calledNumbers[n] && calledNumbers[n].by === myUid));
-    btn.disabled = !canClick;
+    btn.disabled = !canClickNumber(n);
     btn.addEventListener("click", () => handleNumberClick(n));
     publicGridEl.appendChild(btn);
   }
 }
 function renderMyCard() {
   myCardEl.innerHTML = "";
-  const state = roomMeta.gameState || "lobby";
   myBoard.forEach(n => {
     const btn = document.createElement("button");
     btn.className = "num-btn" + (calledNumbers[n] ? " active" : "");
     btn.textContent = n;
-    const canClick = state === "playing" && (isMyTurn() || (calledNumbers[n] && calledNumbers[n].by === myUid));
-    btn.disabled = !canClick;
+    btn.disabled = !canClickNumber(n);
     btn.addEventListener("click", () => handleNumberClick(n));
     myCardEl.appendChild(btn);
   });
 }
 async function handleNumberClick(num) {
   if (!currentRoomId || roomMeta.gameState !== "playing") return;
-  const already = calledNumbers[num];
+  if (calledNumbers[num]) return; // 已經叫出的號碼不可再變動，避免爭議
+  if (!isMyTurn()) return;
 
-  if (already) {
-    if (already.by !== myUid) return;
-    await set(ref(db, `rooms/${currentRoomId}/calledNumbers/${num}`), null);
-    pushLog(`${myName}：取消 ${num}`);
-  } else {
-    if (!isMyTurn()) return;
-    const numRef = ref(db, `rooms/${currentRoomId}/calledNumbers/${num}`);
-    const result = await runTransaction(numRef, (curr) => {
-      if (curr) return; // 已被別人搶先叫走，放棄
-      return { by: myUid, byName: myName, at: Date.now() };
-    });
-    if (!result.committed) return;
-    await runTransaction(ref(db, `rooms/${currentRoomId}/meta/turnIndex`), (v) => (v || 0) + 1);
-    pushLog(`${myName}：${num}`);
-  }
+  const numRef = ref(db, `rooms/${currentRoomId}/calledNumbers/${num}`);
+  const result = await runTransaction(numRef, (curr) => {
+    if (curr) return; // 已被別人搶先叫走，放棄
+    return { by: myUid, byName: myName, at: Date.now() };
+  });
+  if (!result.committed) return;
+  await runTransaction(ref(db, `rooms/${currentRoomId}/meta/turnIndex`), (v) => (v || 0) + 1);
+  pushLog(`${myName}：${num}`);
 }
 
 /* ===== Bingo 计算 & 炫耀 ===== */
