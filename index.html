@@ -90,7 +90,7 @@
     border:none;background:none;color:var(--ink-soft);font-size:13px;padding:0 2px;cursor:pointer;line-height:1;
   }
   .transfer-btn:hover{color:var(--gold-dark);transform:none;}
-  #refreshCardBtn{width:100%;margin-top:auto;}
+  .card-actions-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;}
 
   /* ===== 中欄：轉盤提示 + 彩球 ===== */
   .turn-row{display:flex;align-items:center;justify-content:center;gap:10px;padding:2px 0 12px;min-height:36px;}
@@ -114,7 +114,7 @@
   }
   .num-btn:disabled{cursor:not-allowed;opacity:.4;transform:none;}
 
-  .brag-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:18px 0 4px;}
+  .card-actions-row + .card-actions-row{margin-top:10px;}
   .bingo-count-label{
     font-size:14px;font-weight:700;background:var(--ink);color:var(--gold);
     padding:6px 14px;border-radius:9px;font-family:"IBM Plex Mono",monospace;
@@ -204,7 +204,6 @@
     <button id="clearOrderBtn">清除排序</button>
     <div id="playerListEl"></div>
     <button id="deleteRoomBtn" class="danger hidden">刪除房間</button>
-    <button id="refreshCardBtn">刷新我的卡片</button>
   </div>
 
   <div class="col col-center">
@@ -215,15 +214,18 @@
     <div class="section-label">公共號碼 1–50</div>
     <div id="publicGridEl" class="public-grid"></div>
 
-    <div class="brag-row">
+    <div class="ticket-divider"></div>
+    <div class="section-label">我的卡片</div>
+    <div id="myCardEl" class="my-card-grid"></div>
+
+    <div class="card-actions-row">
+      <button id="refreshCardBtn">🔄 刷新我的卡片</button>
+    </div>
+    <div class="card-actions-row">
       <button id="bragBtn" disabled>🎊 炫耀</button>
       <div class="bingo-count-label">BINGO：<span id="bingoCountEl">0</span> 條</div>
     </div>
     <div id="bragMsgEl" class="brag-msg"></div>
-
-    <div class="ticket-divider"></div>
-    <div class="section-label">我的卡片</div>
-    <div id="myCardEl" class="my-card-grid"></div>
   </div>
 
   <div class="col col-right">
@@ -272,7 +274,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.8";
+const APP_VERSION = "v26.8.8.9";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -685,12 +687,15 @@ function subscribeRoom() {
 
     renderPlayers();
     renderPublicGrid();
+    renderMyCard();
     renderTurnHint();
   }));
 
   unsubs.push(onValue(ref(db, `rooms/${currentRoomId}/players`), (snap) => {
     players = snap.val() || {};
     renderPlayers();
+    renderPublicGrid();
+    renderMyCard();
     renderTurnHint();
     renderReadyStatus();
     maybeClaimHost();
