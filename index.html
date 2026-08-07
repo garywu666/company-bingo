@@ -149,6 +149,15 @@
     .my-card-grid .num-btn{width:48px;height:48px;font-size:15px;}
     .log-box{height:260px;}
   }
+
+  .start-toast{
+    position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-12px);
+    background:var(--gold);color:var(--gold-ink);font-weight:700;font-size:16px;
+    padding:10px 22px;border-radius:999px;border:1.5px solid var(--gold-dark);
+    box-shadow:0 8px 24px rgba(24,20,44,.25);z-index:80;
+    opacity:0;transition:opacity .3s ease, transform .3s ease;pointer-events:none;
+  }
+  .start-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 </style>
 </head>
 <body>
@@ -227,6 +236,7 @@
   <div class="modal" style="width:360px;">
     <h3>準備開始？</h3>
     <p class="muted" style="margin-top:-6px;">任何人按「取消」都會中止準備。</p>
+    <p id="hostAutoNoteEl" class="muted hidden" style="margin:0 0 10px;color:var(--gold-dark);font-weight:600;">👑 你是房主，系統已自動幫你準備，等待其他人</p>
     <div class="ready-actions">
       <button class="primary" id="readyBtn">準備</button>
       <button id="readyCancelBtn">取消</button>
@@ -234,6 +244,8 @@
     <div id="readyStatusEl"></div>
   </div>
 </div>
+
+<div id="startToast" class="start-toast hidden">🎉 遊戲開始！</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
@@ -260,7 +272,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.7";
+const APP_VERSION = "v26.8.8.8";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -327,8 +339,21 @@ const readyModal      = $("readyModal");
 const readyBtn        = $("readyBtn");
 const readyCancelBtn  = $("readyCancelBtn");
 const readyStatusEl   = $("readyStatusEl");
+const hostAutoNoteEl  = $("hostAutoNoteEl");
+const startToastEl    = $("startToast");
 
 /* ===== 工具 ===== */
+let startToastTimer = null;
+function showStartToast() {
+  if (startToastTimer) clearTimeout(startToastTimer);
+  startToastEl.classList.remove("hidden");
+  requestAnimationFrame(() => startToastEl.classList.add("show"));
+  startToastTimer = setTimeout(() => {
+    startToastEl.classList.remove("show");
+    setTimeout(() => startToastEl.classList.add("hidden"), 320);
+  }, 2200);
+}
+
 function randomBoard() {
   const nums = Array.from({ length: 50 }, (_, i) => i + 1);
   for (let i = nums.length - 1; i > 0; i--) {
@@ -643,11 +668,15 @@ function subscribeRoom() {
       return;
     }
     hadValidMeta = true;
+    const prevState = roomMeta.gameState;
     roomMeta = val;
     isHost = roomMeta.hostId === myUid;
     roomLabelEl.textContent = `房間：${roomMeta.name || ""}　暱稱：${myName}`;
 
     const state = roomMeta.gameState || "lobby";
+    if (state === "playing" && prevState && prevState !== "playing") {
+      showStartToast();
+    }
     lockBtn.textContent = state === "playing" ? "取消鎖定" : "鎖定";
     lockBtn.classList.toggle("hidden", !isHost);
     deleteRoomBtn.classList.toggle("hidden", !isHost);
@@ -699,7 +728,12 @@ function subscribeRoom() {
 
   unsubs.push(onValue(ref(db, `rooms/${currentRoomId}/prepare`), (snap) => {
     const active = !!(snap.val() && snap.val().active);
-    if (active) { readyModal.classList.remove("hidden"); renderReadyStatus(); }
+    if (active) {
+      readyModal.classList.remove("hidden");
+      readyBtn.classList.toggle("hidden", isHost);
+      hostAutoNoteEl.classList.toggle("hidden", !isHost);
+      renderReadyStatus();
+    }
     else { readyModal.classList.add("hidden"); }
   }));
 }
@@ -782,11 +816,13 @@ lockBtn.addEventListener("click", async () => {
     if (!list.length) { alert("目前沒有玩家"); return; }
     if (list.some(p => p.order == null)) { alert("請設置左側順位排序"); return; }
     const updates = {};
-    Object.keys(players).forEach(uid => { updates[`rooms/${currentRoomId}/players/${uid}/ready`] = "waiting"; });
+    Object.keys(players).forEach(uid => {
+      updates[`rooms/${currentRoomId}/players/${uid}/ready`] = (uid === myUid) ? "ready" : "waiting";
+    });
     updates[`rooms/${currentRoomId}/prepare`] = { active: true };
     updates[`rooms/${currentRoomId}/meta/gameState`] = "preparing";
     await update(ref(db), updates);
-    pushLog("房主啟動準備流程");
+    pushLog("房主啟動準備流程（房主自動視為已準備）");
   } else if (state === "playing") {
     if (!confirm("是否結束此局並清除所有公共號碼？")) return;
     const updates = {};
