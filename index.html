@@ -188,7 +188,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.2";
+const APP_VERSION = "v26.8.8.3";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -379,7 +379,28 @@ createRoomBtn.addEventListener("click", async () => {
   await joinRoomById(roomId, pwd, true);
 });
 
+/* 離開某房間的共用清理邏輯：移除玩家資料與卡片，房間空了就整個刪除 */
+async function leaveRoomCleanup(roomId) {
+  if (!roomId) return;
+  try { push(ref(db, `rooms/${roomId}/logs`), { text: `${myName} 離開房間`, timestamp: Date.now() }); } catch (e) {}
+  await remove(ref(db, `rooms/${roomId}/players/${myUid}`));
+  await remove(ref(db, `rooms/${roomId}/boards/${myUid}`));
+  const remainSnap = await get(ref(db, `rooms/${roomId}/players`));
+  const remain = remainSnap.val() || {};
+  if (!Object.keys(remain).length) {
+    await remove(ref(db, `rooms/${roomId}`));
+  }
+}
+
 async function joinRoomById(roomId, pwdOrNull, skipPwdCheck) {
+  // 避免「同時掛在多個房間」：切換房間前，先自動離開目前所在的房間
+  if (currentRoomId && currentRoomId !== roomId) {
+    if (!confirm("你目前在另一個房間，加入新房間會自動離開原本的房間，確定要繼續嗎？")) return;
+    await leaveRoomCleanup(currentRoomId);
+    clearSubs();
+    currentRoomId = null;
+  }
+
   const metaSnap = await get(ref(db, `rooms/${roomId}/meta`));
   if (!metaSnap.exists()) { alert("房間不存在"); return; }
   const meta = metaSnap.val();
@@ -452,16 +473,7 @@ toggleLobbyBtn.addEventListener("click", () => {
 leaveRoomBtn.addEventListener("click", async () => {
   if (!currentRoomId) return;
   const roomId = currentRoomId;
-  pushLog(`${myName} 離開房間`);
-  await remove(ref(db, `rooms/${roomId}/players/${myUid}`));
-  await remove(ref(db, `rooms/${roomId}/boards/${myUid}`));
-
-  const remainSnap = await get(ref(db, `rooms/${roomId}/players`));
-  const remain = remainSnap.val() || {};
-  if (!Object.keys(remain).length) {
-    await remove(ref(db, `rooms/${roomId}`));
-  }
-
+  await leaveRoomCleanup(roomId);
   localStorage.removeItem("bingo_last_room");
   clearSubs();
   currentRoomId = null;
