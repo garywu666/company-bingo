@@ -73,7 +73,7 @@
   .col{background:var(--paper);border-radius:14px;box-shadow:0 2px 10px rgba(24,20,44,.06);padding:14px;border:1px solid var(--line);}
   .col-left{width:200px;min-width:180px;display:flex;flex-direction:column;gap:9px;}
   .col-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;}
-  .col-right{width:290px;min-width:220px;}
+  .col-right{width:340px;min-width:260px;}
 
   .col-left h3{margin:0;font-size:14px;letter-spacing:.3px;}
   .section-label{font-size:11px;color:var(--ink-soft);letter-spacing:1px;text-transform:uppercase;margin:2px 0 6px;text-align:center;}
@@ -90,8 +90,9 @@
     font-size:12px;flex-shrink:0;
   }
   .player-row .order-badge{
-    min-width:20px;height:20px;text-align:center;line-height:20px;border-radius:999px;
-    background:var(--ink);color:var(--gold);font-size:11px;font-family:"IBM Plex Mono",monospace;font-weight:600;
+    min-width:22px;width:22px;height:22px;text-align:center;line-height:22px;border-radius:999px;
+    background:#0a0810;color:var(--gold);font-size:11px;font-family:"IBM Plex Mono",monospace;font-weight:700;
+    flex-shrink:0;box-shadow:inset 0 0 0 1.5px #000;
   }
   .player-row.clickable{cursor:pointer;}
   .player-row.clickable:hover{box-shadow:inset 0 0 0 1.5px var(--gold-dark);}
@@ -99,6 +100,14 @@
     border:none;background:none;color:var(--ink-soft);font-size:13px;padding:0 2px;cursor:pointer;line-height:1;
   }
   .transfer-btn:hover{color:var(--gold-dark);transform:none;}
+  #transferHostBtn{width:100%;font-size:12px;padding:5px;}
+  .transfer-player-list{display:flex;flex-direction:column;gap:5px;max-height:260px;overflow-y:auto;}
+  .transfer-row{
+    display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:9px;
+    background:var(--paper-dim);cursor:pointer;font-size:13px;border:1.5px solid transparent;
+  }
+  .transfer-row:hover{border-color:var(--line);}
+  .transfer-row.selected{border-color:var(--gold-dark);background:#fbeecb;}
   .card-actions-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:14px;}
 
   /* ===== 中欄：轉盤提示 + 彩球 ===== */
@@ -138,12 +147,13 @@
   /* ===== 右欄：日誌 ===== */
   .log-box{
     background:var(--ink);color:#d9d2f0;border-radius:10px;padding:10px;
-    font-family:"IBM Plex Mono",monospace;font-size:11.5px;height:520px;overflow-y:auto;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;height:600px;overflow:auto;
     border:1px solid var(--ink-line);
+    resize:both;min-height:220px;min-width:220px;max-width:100%;
   }
   .log-line{
     display:flex;align-items:flex-start;gap:6px;margin-bottom:3px;line-height:1.5;
-    font-family:"ZCOOL KuaiLe","Noto Sans TC",system-ui,sans-serif;font-size:12.5px;
+    font-family:"ZCOOL KuaiLe","Noto Sans TC",system-ui,sans-serif;font-size:15.5px;
   }
   .log-line span:last-child{white-space:pre-wrap;word-break:break-word;}
   .log-dot{width:7px;height:7px;min-width:7px;border-radius:50%;margin-top:4px;flex-shrink:0;}
@@ -323,6 +333,7 @@
     </div>
     <button id="clearOrderBtn">清除排序</button>
     <div id="playerListEl"></div>
+    <button id="transferHostBtn" class="hidden">👑 移交房主</button>
     <button id="deleteRoomBtn" class="danger hidden">刪除房間</button>
   </div>
 
@@ -378,6 +389,18 @@
 <div id="startToast" class="start-toast hidden">🎉 遊戲開始！</div>
 <div id="cursorHintEl" class="cursor-hint"></div>
 
+<div id="transferModal" class="modal-backdrop hidden">
+  <div class="modal" style="width:320px;">
+    <h3>移交房主</h3>
+    <p class="muted" style="margin-top:-6px;">選擇要移交給誰</p>
+    <div id="transferPlayerListEl" class="transfer-player-list"></div>
+    <div class="ready-actions" style="margin-top:12px;">
+      <button class="primary" id="transferConfirmBtn">確認</button>
+      <button id="transferCancelBtn">取消</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import {
@@ -403,7 +426,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.21";
+const APP_VERSION = "v26.8.8.22";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -457,6 +480,11 @@ const roomListEl      = $("roomListEl");
 const playerListEl    = $("playerListEl");
 const clearOrderBtn   = $("clearOrderBtn");
 const deleteRoomBtn   = $("deleteRoomBtn");
+const transferHostBtn      = $("transferHostBtn");
+const transferModal        = $("transferModal");
+const transferPlayerListEl = $("transferPlayerListEl");
+const transferConfirmBtn   = $("transferConfirmBtn");
+const transferCancelBtn    = $("transferCancelBtn");
 const lockBtn         = $("lockBtn");
 const refreshCardBtn  = $("refreshCardBtn");
 const bingoThresholdInput = $("bingoThresholdInput");
@@ -599,7 +627,7 @@ async function tryAutoRejoin() {
   listenRoomList();
 }
 
-/* ===== 大厅 / 房间列表 ===== */
+/* ===== 大廳 / 房間列表 ===== */
 let roomListUnsub = null;
 function listenRoomList() {
   if (roomListUnsub) return;
@@ -730,7 +758,7 @@ async function joinRoomById(roomId, pwdOrNull, skipPwdCheck) {
   setupPresence(roomId);
 }
 
-/* ===== 显示切换 ===== */
+/* ===== 顯示切換 ===== */
 function showLobby() {
   lobbySection.classList.remove("hidden");
   gameSection.classList.add("hidden");
@@ -845,7 +873,7 @@ function maybeClaimHost() {
   }, 5000);
 }
 
-/* ===== 房间内订阅 ===== */
+/* ===== 房間內訂閱 ===== */
 function clearSubs() {
   unsubs.forEach(u => u && u());
   unsubs = [];
@@ -879,6 +907,7 @@ function subscribeRoom() {
     else lockBtn.textContent = "鎖定";
     lockBtn.classList.toggle("hidden", !isHost);
     deleteRoomBtn.classList.toggle("hidden", !isHost);
+    transferHostBtn.classList.toggle("hidden", !isHost);
     clearOrderBtn.disabled = !isHost || state !== "lobby";
     refreshCardBtn.disabled = state !== "lobby";
 
@@ -990,28 +1019,20 @@ function renderPlayers() {
     row.className = "player-row" + (uid === myUid ? " me" : "") + (p.online !== true ? " offline" : "");
     if (isHost && state === "lobby") row.classList.add("clickable");
 
-    const icon = document.createElement("span");
-    icon.className = "player-avatar";
-    icon.style.background = colorForUid(uid);
-    icon.textContent = uid === roomMeta.hostId ? "👑" : "👤";
-    const name = document.createElement("span");
-    name.className = "name";
-    name.textContent = (p.name || "(未命名)") + (p.online !== true ? "（離線）" : "");
     const badge = document.createElement("span");
     badge.className = "order-badge";
     badge.textContent = p.order ? String(p.order) : "";
 
-    row.appendChild(icon); row.appendChild(name); row.appendChild(badge);
+    const icon = document.createElement("span");
+    icon.className = "player-avatar";
+    icon.style.background = colorForUid(uid);
+    icon.textContent = uid === roomMeta.hostId ? "👑" : "👤";
 
-    // 房主可以隨時手動把房主身份移交給其他在線玩家
-    if (isHost && uid !== myUid && p.online === true) {
-      const transferBtn = document.createElement("button");
-      transferBtn.className = "transfer-btn";
-      transferBtn.title = `移交房主給 ${p.name || "此玩家"}`;
-      transferBtn.textContent = "👑→";
-      transferBtn.addEventListener("click", (e) => { e.stopPropagation(); transferHost(uid); });
-      row.appendChild(transferBtn);
-    }
+    const name = document.createElement("span");
+    name.className = "name";
+    name.textContent = (p.name || "(未命名)") + (p.online !== true ? "（離線）" : "");
+
+    row.appendChild(badge); row.appendChild(icon); row.appendChild(name);
 
     // 房主可以隨時移除任何其他玩家（包含清掉離線的殘留幽靈玩家）
     if (isHost && uid !== myUid) {
@@ -1037,11 +1058,57 @@ async function transferHost(targetUid) {
   if (!isHost || !currentRoomId || targetUid === myUid) return;
   const target = players[targetUid];
   if (!target) return;
-  if (!confirm(`確定要將房主移交給「${target.name || "此玩家"}」嗎？`)) return;
   if (hostMigrationTimer) { clearTimeout(hostMigrationTimer); hostMigrationTimer = null; }
   await update(ref(db, `rooms/${currentRoomId}/meta`), { hostId: targetUid });
   pushLog(`${myName} 將房主移交給 ${target.name || "此玩家"}`);
 }
+
+/* ===== 移交房主：獨立按鈕 + 選人視窗 ===== */
+let transferSelectedUid = null;
+function renderTransferPlayerList() {
+  transferPlayerListEl.innerHTML = "";
+  const candidates = Object.entries(players).filter(([uid, p]) => uid !== myUid && p.online === true);
+  if (!candidates.length) {
+    const none = document.createElement("div");
+    none.className = "muted";
+    none.textContent = "目前沒有其他在線玩家可以移交";
+    transferPlayerListEl.appendChild(none);
+    transferConfirmBtn.disabled = true;
+    return;
+  }
+  transferConfirmBtn.disabled = true;
+  candidates.forEach(([uid, p]) => {
+    const row = document.createElement("div");
+    row.className = "transfer-row";
+    const avatar = document.createElement("span");
+    avatar.className = "player-avatar";
+    avatar.style.background = colorForUid(uid);
+    avatar.textContent = uid === roomMeta.hostId ? "👑" : "👤";
+    const name = document.createElement("span");
+    name.textContent = p.name || "(未命名)";
+    row.appendChild(avatar); row.appendChild(name);
+    row.addEventListener("click", () => {
+      transferSelectedUid = uid;
+      transferPlayerListEl.querySelectorAll(".transfer-row").forEach(r => r.classList.remove("selected"));
+      row.classList.add("selected");
+      transferConfirmBtn.disabled = false;
+    });
+    transferPlayerListEl.appendChild(row);
+  });
+}
+transferHostBtn.addEventListener("click", () => {
+  if (!isHost || !currentRoomId) return;
+  transferSelectedUid = null;
+  renderTransferPlayerList();
+  transferModal.classList.remove("hidden");
+});
+transferCancelBtn.addEventListener("click", () => transferModal.classList.add("hidden"));
+transferModal.addEventListener("click", (e) => { if (e.target === transferModal) transferModal.classList.add("hidden"); });
+transferConfirmBtn.addEventListener("click", async () => {
+  if (!transferSelectedUid) return;
+  await transferHost(transferSelectedUid);
+  transferModal.classList.add("hidden");
+});
 async function removePlayer(targetUid) {
   if (!isHost || !currentRoomId || targetUid === myUid) return;
   const target = players[targetUid];
@@ -1171,7 +1238,7 @@ function renderReadyStatus() {
   }
 }
 
-/* ===== 轮次提示 / 跳过离线玩家 ===== */
+/* ===== 輪次提示 / 跳過離線玩家 ===== */
 function currentTurnUid() {
   const ordered = orderedPlayers();
   if (!ordered.length) return null;
@@ -1202,7 +1269,7 @@ skipTurnBtn.addEventListener("click", async () => {
   pushLog(`房主跳過了 ${p ? p.name : "離線玩家"}（離線中）`);
 });
 
-/* ===== 号码渲染 / 点击 ===== */
+/* ===== 號碼渲染 / 點擊 ===== */
 function isMyTurn() {
   return (roomMeta.gameState === "playing") && currentTurnUid() === myUid;
 }
