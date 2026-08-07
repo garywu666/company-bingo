@@ -327,7 +327,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.14";
+const APP_VERSION = "v26.8.8.15";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -1061,8 +1061,11 @@ async function handleNumberClick(num) {
     return { by: myUid, byName: myName, at: Date.now() };
   });
   if (!result.committed) return;
-  await runTransaction(ref(db, `rooms/${currentRoomId}/meta/turnIndex`), (v) => (v || 0) + 1);
+
+  // 叫號成功要立刻記錄日誌，時間戳記才會早於這次叫號連帶觸發的 BINGO 判定日誌
   pushLog(`${myName}：${num}`);
+  // 輪次遞增不用等它完成，不影響後續流程
+  runTransaction(ref(db, `rooms/${currentRoomId}/meta/turnIndex`), (v) => (v || 0) + 1);
 }
 
 /* ===== Bingo 计算 & 炫耀 ===== */
