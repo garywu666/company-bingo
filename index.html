@@ -4,82 +4,151 @@
 <meta charset="utf-8" />
 <title>Company Bingo</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --blue:#2563eb;--blue-dark:#1d4ed8;--bg:#f3f4f6;--panel:#ffffff;
-    --dark:#111827;--gray:#6b7280;--border:#e5e7eb;
+    --ink:#18142c; --ink-soft:#5c5872; --ink-line:#2a2547;
+    --paper:#fffdf7; --paper-dim:#f4ecd8; --line:#e4d6ae;
+    --gold:#e0a527; --gold-dark:#a97a12; --gold-ink:#2a1c02;
+    --coral:#e2543f; --coral-dark:#ad3c2b;
+    --green:#3f8f5f; --green-dark:#256b41;
   }
   *{box-sizing:border-box;}
-  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--dark);}
+  body{
+    margin:0;background:var(--paper-dim);color:var(--ink);
+    font-family:"Space Grotesk",system-ui,"Noto Sans TC",sans-serif;
+  }
+  .mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,monospace;}
   .hidden{display:none !important;}
-  button{cursor:pointer;border-radius:6px;border:1px solid #d1d5db;padding:6px 12px;background:#fff;font-size:14px;}
-  button.primary{background:var(--blue);border-color:var(--blue-dark);color:#fff;}
-  button.danger{background:#ef4444;border-color:#b91c1c;color:#fff;}
-  button:disabled{opacity:.45;cursor:not-allowed;}
 
-  .topbar{background:var(--dark);color:#e5e7eb;padding:8px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;}
-  .topbar b{font-size:16px;}
-  .topbar .right{display:flex;align-items:center;gap:10px;font-size:13px;flex-wrap:wrap;}
-  .topbar a.toggle{color:#93c5fd;text-decoration:underline;cursor:pointer;font-size:13px;}
-  .topbar button.small{font-size:12px;padding:3px 8px;}
+  button{
+    cursor:pointer;border-radius:8px;border:1.5px solid var(--line);padding:7px 13px;
+    background:var(--paper);color:var(--ink);font-family:inherit;font-weight:500;font-size:13px;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  button:hover:not(:disabled){transform:translateY(-1px);}
+  button.primary{background:var(--gold);border-color:var(--gold-dark);color:var(--gold-ink);font-weight:700;}
+  button.danger{background:var(--coral);border-color:var(--coral-dark);color:#fff8f5;}
+  button:disabled{opacity:.4;cursor:not-allowed;transform:none;}
 
-  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:60;}
-  .modal{background:#fff;border-radius:10px;padding:18px;width:320px;max-width:90vw;box-shadow:0 10px 30px rgba(0,0,0,.3);}
-  .modal h3{margin:0 0 10px;}
-  .modal input{width:100%;padding:6px 8px;border-radius:6px;border:1px solid #ccc;font-size:14px;margin-bottom:10px;}
+  /* ===== 頂欄：霓虹招牌感 ===== */
+  .topbar{
+    background:var(--ink);color:#f4ecd8;padding:12px 18px;
+    display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+    border-bottom:3px solid var(--gold);
+  }
+  .topbar .brand{font-size:19px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;}
+  .topbar .brand .ver{margin-left:8px;font-size:10px;font-weight:500;letter-spacing:0;color:#8b83a8;text-transform:none;}
+  .topbar .right{display:flex;align-items:center;gap:10px;font-size:12px;flex-wrap:wrap;color:#c9c2e0;}
+  .topbar a.toggle{color:var(--gold);text-decoration:underline;cursor:pointer;font-size:12px;}
+  .topbar button.small{font-size:11px;padding:4px 9px;background:transparent;border-color:#443d6b;color:#e9e3fa;}
 
-  .lobby{max-width:900px;margin:14px auto;padding:0 12px;}
-  .card{background:var(--panel);border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px;}
-  .card h2{margin:0 0 10px;font-size:17px;}
-  .lobby label{font-size:13px;display:block;margin:6px 0 2px;color:#374151;}
-  .lobby input{width:100%;padding:6px 8px;border-radius:6px;border:1px solid #ccc;font-size:14px;}
-  .room-list{list-style:none;margin:8px 0 0;padding:0;}
-  .room-list li{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid var(--border);font-size:14px;}
+  /* ===== Modal ===== */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(20,16,40,.6);display:flex;align-items:center;justify-content:center;z-index:60;}
+  .modal{background:var(--paper);border-radius:14px;padding:20px;width:320px;max-width:90vw;box-shadow:0 20px 50px rgba(0,0,0,.35);border:1px solid var(--line);}
+  .modal h3{margin:0 0 10px;font-size:17px;}
+  .modal input{width:100%;padding:8px 9px;border-radius:8px;border:1.5px solid var(--line);font-size:14px;margin-bottom:10px;font-family:inherit;background:#fff;}
+
+  /* ===== 大廳 ===== */
+  .lobby{max-width:880px;margin:18px auto;padding:0 14px;}
+  .card{background:var(--paper);border-radius:14px;padding:16px 18px;box-shadow:0 2px 10px rgba(24,20,44,.06);margin-bottom:14px;border:1px solid var(--line);}
+  .card h2{margin:0 0 12px;font-size:16px;letter-spacing:.3px;}
+  .lobby label{font-size:12px;display:block;margin:8px 0 3px;color:var(--ink-soft);}
+  .lobby input{width:100%;padding:8px 9px;border-radius:8px;border:1.5px solid var(--line);font-size:14px;font-family:inherit;background:#fff;}
+  .room-list{list-style:none;margin:6px 0 0;padding:0;}
+  .room-list li{display:flex;justify-content:space-between;align-items:center;padding:9px 4px;border-bottom:1px dashed var(--line);font-size:14px;}
+  .room-list li:last-child{border-bottom:none;}
   .room-list .name{font-weight:600;}
-  .muted{color:var(--gray);font-size:12px;}
+  .muted{color:var(--ink-soft);font-size:12px;}
 
-  .game-wrap{display:flex;gap:10px;padding:10px;align-items:flex-start;}
-  .col{background:var(--panel);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.08);padding:12px;}
-  .col-left{width:190px;min-width:170px;display:flex;flex-direction:column;gap:8px;}
+  /* ===== 三欄主畫面 ===== */
+  .game-wrap{display:flex;gap:12px;padding:12px;align-items:flex-start;max-width:1180px;margin:0 auto;}
+  .col{background:var(--paper);border-radius:14px;box-shadow:0 2px 10px rgba(24,20,44,.06);padding:14px;border:1px solid var(--line);}
+  .col-left{width:200px;min-width:180px;display:flex;flex-direction:column;gap:9px;}
   .col-center{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;}
-  .col-right{width:300px;min-width:220px;}
+  .col-right{width:290px;min-width:220px;}
 
-  .col-left h3{margin:0;font-size:15px;}
+  .col-left h3{margin:0;font-size:14px;letter-spacing:.3px;}
+  .section-label{font-size:11px;color:var(--ink-soft);letter-spacing:1px;text-transform:uppercase;margin:2px 0 6px;text-align:center;}
   .left-header{display:flex;justify-content:space-between;align-items:center;}
-  #clearOrderBtn,#deleteRoomBtn{width:100%;font-size:12px;padding:4px;}
-  #playerListEl{display:flex;flex-direction:column;gap:3px;}
-  .player-row{display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:6px;font-size:13px;background:#f9fafb;}
-  .player-row.me{background:#dbeafe;}
+  #clearOrderBtn,#deleteRoomBtn{width:100%;font-size:12px;padding:5px;}
+  #playerListEl{display:flex;flex-direction:column;gap:4px;}
+
+  .player-row{display:flex;align-items:center;gap:7px;padding:6px 7px;border-radius:9px;font-size:13px;background:var(--paper-dim);}
+  .player-row.me{background:#fbeecb;box-shadow:inset 0 0 0 1.5px var(--gold);}
   .player-row.offline{opacity:.5;}
   .player-row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .player-row .order-badge{min-width:20px;text-align:center;border-radius:999px;background:#e5e7eb;padding:1px 6px;font-size:12px;}
+  .player-row .order-badge{
+    min-width:20px;height:20px;text-align:center;line-height:20px;border-radius:999px;
+    background:var(--ink);color:var(--gold);font-size:11px;font-family:"IBM Plex Mono",monospace;font-weight:600;
+  }
   .player-row.clickable{cursor:pointer;}
-  .player-row.clickable:hover{outline:1px solid var(--blue);}
+  .player-row.clickable:hover{box-shadow:inset 0 0 0 1.5px var(--gold-dark);}
+  .transfer-btn{
+    border:none;background:none;color:var(--ink-soft);font-size:13px;padding:0 2px;cursor:pointer;line-height:1;
+  }
+  .transfer-btn:hover{color:var(--gold-dark);transform:none;}
   #refreshCardBtn{width:100%;margin-top:auto;}
 
-  .turn-row{display:flex;align-items:center;justify-content:center;gap:10px;padding:6px 0 10px;}
-  .turn-hint{font-size:20px;font-weight:700;color:#b45309;text-align:center;}
-  .turn-hint.idle{font-size:14px;font-weight:400;color:var(--gray);}
+  /* ===== 中欄：轉盤提示 + 彩球 ===== */
+  .turn-row{display:flex;align-items:center;justify-content:center;gap:10px;padding:2px 0 12px;min-height:36px;}
+  .turn-hint{
+    font-size:16px;font-weight:700;color:var(--gold-ink);text-align:center;
+    background:var(--gold);padding:6px 18px;border-radius:999px;border:1.5px solid var(--gold-dark);
+    box-shadow:0 3px 0 var(--gold-dark);
+  }
+  .turn-hint.idle{font-size:12px;font-weight:500;color:var(--ink-soft);background:none;border:1.5px dashed var(--line);box-shadow:none;padding:5px 16px;}
 
-  .public-grid{display:grid;grid-template-columns:repeat(10,36px);gap:5px;justify-content:center;}
-  .num-btn{width:36px;height:36px;border-radius:6px;border:1px solid #d1d5db;background:#f9fafb;display:flex;align-items:center;justify-content:center;font-size:13px;user-select:none;}
-  .num-btn.active{background:var(--blue);color:#fff;border-color:var(--blue-dark);}
-  .num-btn:disabled{cursor:not-allowed;opacity:.45;}
+  .public-grid{display:grid;grid-template-columns:repeat(10,34px);gap:6px;justify-content:center;}
+  .num-btn{
+    width:34px;height:34px;border-radius:50%;border:1.5px solid var(--line);background:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:12px;user-select:none;
+    font-family:"IBM Plex Mono",monospace;font-weight:600;color:var(--ink);
+    transition:transform .15s ease, background .15s ease, box-shadow .15s ease;
+  }
+  .num-btn.active{
+    background:var(--gold);color:var(--gold-ink);border-color:var(--gold-dark);
+    transform:scale(1.08);box-shadow:0 2px 6px rgba(224,165,39,.55);
+  }
+  .num-btn:disabled{cursor:not-allowed;opacity:.4;transform:none;}
 
-  .brag-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:16px 0 4px;}
-  .bingo-count-label{font-size:16px;font-weight:700;}
-  .brag-msg{font-size:12px;color:#ef4444;margin:0 0 10px;text-align:center;height:14px;}
+  .brag-row{display:flex;align-items:center;justify-content:center;gap:10px;margin:18px 0 4px;}
+  .bingo-count-label{
+    font-size:14px;font-weight:700;background:var(--ink);color:var(--gold);
+    padding:6px 14px;border-radius:9px;font-family:"IBM Plex Mono",monospace;
+  }
+  .brag-msg{font-size:12px;color:var(--coral-dark);margin:2px 0 8px;text-align:center;height:14px;font-weight:600;}
 
-  .my-card-grid{display:grid;grid-template-columns:repeat(5,54px);grid-auto-rows:54px;gap:5px;}
-  .my-card-grid .num-btn{width:54px;height:54px;font-size:16px;}
+  .ticket-divider{
+    width:100%;max-width:300px;border-top:2px dashed var(--line);margin:8px 0 10px;position:relative;
+  }
+  .my-card-grid{display:grid;grid-template-columns:repeat(5,54px);grid-auto-rows:54px;gap:7px;}
+  .my-card-grid .num-btn{width:54px;height:54px;font-size:17px;}
 
-  .log-box{background:#111827;color:#e5e7eb;border-radius:6px;padding:8px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;height:520px;overflow-y:auto;white-space:pre-wrap;}
+  /* ===== 右欄：日誌 ===== */
+  .log-box{
+    background:var(--ink);color:#d9d2f0;border-radius:10px;padding:10px;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;height:520px;overflow-y:auto;white-space:pre-wrap;
+    border:1px solid var(--ink-line);
+  }
 
   .ready-actions{display:flex;gap:8px;margin-bottom:10px;}
   .ready-actions button{flex:1;}
-  .ready-status-row{display:flex;justify-content:space-between;font-size:14px;padding:2px 0;}
-  .st-ready{color:#16a34a;}
-  .st-wait{color:#f97316;}
+  .ready-status-row{display:flex;justify-content:space-between;font-size:14px;padding:3px 0;}
+  .st-ready{color:var(--green-dark);font-weight:600;}
+  .st-wait{color:var(--coral-dark);}
+
+  @media (max-width:940px){
+    .game-wrap{flex-direction:column;align-items:stretch;padding:10px;}
+    .col-left,.col-right{width:100%;}
+    .public-grid{grid-template-columns:repeat(10,28px);gap:4px;}
+    .num-btn{width:28px;height:28px;font-size:10px;}
+    .my-card-grid{grid-template-columns:repeat(5,48px);grid-auto-rows:48px;}
+    .my-card-grid .num-btn{width:48px;height:48px;font-size:15px;}
+    .log-box{height:260px;}
+  }
 </style>
 </head>
 <body>
@@ -94,7 +163,7 @@
 </div>
 
 <div class="topbar">
-  <b>Company Bingo <span id="versionTag" style="font-size:11px;color:#6b7280;font-weight:400;"></span></b>
+  <div class="brand">🎟️ Company Bingo <span class="ver mono" id="versionTag"></span></div>
   <div class="right">
     <span id="roomLabel"></span>
     <button id="leaveRoomBtn" class="small hidden">離開房間</button>
@@ -134,19 +203,22 @@
       <span id="turnHintEl" class="turn-hint idle"></span>
       <button id="skipTurnBtn" class="hidden" style="font-size:12px;padding:4px 8px;">跳過此玩家（離線）</button>
     </div>
+    <div class="section-label">公共號碼 1–50</div>
     <div id="publicGridEl" class="public-grid"></div>
 
     <div class="brag-row">
-      <button id="bragBtn" disabled>炫耀</button>
-      <div class="bingo-count-label">🎉 當前 BINGO：<span id="bingoCountEl">0</span> 條</div>
+      <button id="bragBtn" disabled>🎊 炫耀</button>
+      <div class="bingo-count-label">BINGO：<span id="bingoCountEl">0</span> 條</div>
     </div>
     <div id="bragMsgEl" class="brag-msg"></div>
 
+    <div class="ticket-divider"></div>
+    <div class="section-label">我的卡片</div>
     <div id="myCardEl" class="my-card-grid"></div>
   </div>
 
   <div class="col col-right">
-    <h3 style="margin:0 0 8px;">日誌</h3>
+    <h3 style="margin:0 0 10px;font-size:14px;letter-spacing:.3px;">📻 日誌</h3>
     <div id="logBoxEl" class="log-box"></div>
   </div>
 </div>
@@ -188,7 +260,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.3";
+const APP_VERSION = "v26.8.8.5";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -510,14 +582,30 @@ function setupPresence(roomId) {
 }
 
 /* ===== 房主自動轉移 ===== */
+/* 房主轉移設有 5 秒寬限時間，避免房主只是重新整理網頁（短暫斷線重連）就被誤判離線而搶走房主 */
+let hostMigrationTimer = null;
+
 function maybeClaimHost() {
   if (!currentRoomId || !roomMeta.hostId) return;
   const hostPlayer = players[roomMeta.hostId];
   const iAmOnline = players[myUid] && players[myUid].online === true;
-  if (!iAmOnline) return;
   // 房主離線，或房主的玩家資料已經完全不存在（例如主動離開房間），都視為需要轉移
   const hostNeedsMigration = !hostPlayer || hostPlayer.online !== true;
-  if (hostNeedsMigration) {
+
+  if (!hostNeedsMigration) {
+    if (hostMigrationTimer) { clearTimeout(hostMigrationTimer); hostMigrationTimer = null; }
+    return;
+  }
+  if (!iAmOnline) return;
+  if (hostMigrationTimer) return; // 已經在等待寬限時間，不要重複排程
+
+  hostMigrationTimer = setTimeout(() => {
+    hostMigrationTimer = null;
+    // 5 秒後重新確認一次房主是否仍然離線（可能剛好重整完重新連回來了）
+    const hp = players[roomMeta.hostId];
+    const stillNeeds = !hp || hp.online !== true;
+    if (!stillNeeds) return;
+
     const onlineList = Object.entries(players).filter(([, p]) => p.online === true);
     if (!onlineList.length) return;
     onlineList.sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0));
@@ -528,14 +616,18 @@ function maybeClaimHost() {
         if (curr === oldHost) return myUid;
         return; // 已被其他人搶先轉移，放棄
       }).then(res => {
-        if (res.committed) pushLog(`${myName} 自動成為新房主（原房主已離開）`);
+        if (res.committed) pushLog(`${myName} 自動成為新房主（原房主已離開超過 5 秒）`);
       });
     }
-  }
+  }, 5000);
 }
 
 /* ===== 房间内订阅 ===== */
-function clearSubs() { unsubs.forEach(u => u && u()); unsubs = []; }
+function clearSubs() {
+  unsubs.forEach(u => u && u());
+  unsubs = [];
+  if (hostMigrationTimer) { clearTimeout(hostMigrationTimer); hostMigrationTimer = null; }
+}
 
 function subscribeRoom() {
   clearSubs();
@@ -634,6 +726,17 @@ function renderPlayers() {
     badge.textContent = p.order ? (circled[p.order-1] || String(p.order)) : "";
 
     row.appendChild(icon); row.appendChild(name); row.appendChild(badge);
+
+    // 房主可以隨時手動把房主身份移交給其他在線玩家
+    if (isHost && uid !== myUid && p.online === true) {
+      const transferBtn = document.createElement("button");
+      transferBtn.className = "transfer-btn";
+      transferBtn.title = `移交房主給 ${p.name || "此玩家"}`;
+      transferBtn.textContent = "👑→";
+      transferBtn.addEventListener("click", (e) => { e.stopPropagation(); transferHost(uid); });
+      row.appendChild(transferBtn);
+    }
+
     if (isHost && state === "lobby") row.addEventListener("click", () => togglePlayerOrder(uid));
     playerListEl.appendChild(row);
   });
@@ -643,6 +746,15 @@ function togglePlayerOrder(uid) {
   if (!p) return;
   const newOrder = p.order ? null : nextAvailableOrder();
   update(ref(db, `rooms/${currentRoomId}/players/${uid}`), { order: newOrder });
+}
+async function transferHost(targetUid) {
+  if (!isHost || !currentRoomId || targetUid === myUid) return;
+  const target = players[targetUid];
+  if (!target) return;
+  if (!confirm(`確定要將房主移交給「${target.name || "此玩家"}」嗎？`)) return;
+  if (hostMigrationTimer) { clearTimeout(hostMigrationTimer); hostMigrationTimer = null; }
+  await update(ref(db, `rooms/${currentRoomId}/meta`), { hostId: targetUid });
+  pushLog(`${myName} 將房主移交給 ${target.name || "此玩家"}`);
 }
 clearOrderBtn.addEventListener("click", () => {
   if (!isHost || !currentRoomId) return;
