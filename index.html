@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Mono:wght@500;600;700&family=ZCOOL+KuaiLe&display=swap" rel="stylesheet">
 <style>
   :root{
     --ink:#18142c; --ink-soft:#5c5872; --ink-line:#2a2547;
@@ -85,6 +85,10 @@
   .player-row.me{background:#fbeecb;box-shadow:inset 0 0 0 1.5px var(--gold);}
   .player-row.offline{opacity:.5;}
   .player-row .name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .player-avatar{
+    width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+    font-size:12px;flex-shrink:0;
+  }
   .player-row .order-badge{
     min-width:20px;height:20px;text-align:center;line-height:20px;border-radius:999px;
     background:var(--ink);color:var(--gold);font-size:11px;font-family:"IBM Plex Mono",monospace;font-weight:600;
@@ -114,8 +118,7 @@
     transition:transform .15s ease, background .15s ease, box-shadow .15s ease;
   }
   .num-btn.active{
-    background:var(--gold);color:var(--gold-ink);border-color:var(--gold-dark);
-    transform:scale(1.08);box-shadow:0 2px 6px rgba(224,165,39,.55);
+    color:#fff;transform:scale(1.08);box-shadow:0 2px 6px rgba(0,0,0,.35);
   }
   .num-btn:disabled{cursor:not-allowed;opacity:.4;transform:none;}
 
@@ -135,9 +138,15 @@
   /* ===== 右欄：日誌 ===== */
   .log-box{
     background:var(--ink);color:#d9d2f0;border-radius:10px;padding:10px;
-    font-family:"IBM Plex Mono",monospace;font-size:11.5px;height:520px;overflow-y:auto;white-space:pre-wrap;
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;height:520px;overflow-y:auto;
     border:1px solid var(--ink-line);
   }
+  .log-line{
+    display:flex;align-items:flex-start;gap:6px;margin-bottom:3px;line-height:1.5;
+    font-family:"ZCOOL KuaiLe","Noto Sans TC",system-ui,sans-serif;font-size:12.5px;
+  }
+  .log-line span:last-child{white-space:pre-wrap;word-break:break-word;}
+  .log-dot{width:7px;height:7px;min-width:7px;border-radius:50%;margin-top:4px;flex-shrink:0;}
 
   .ready-actions{display:flex;gap:8px;margin-bottom:10px;}
   .ready-actions button{flex:1;}
@@ -240,12 +249,26 @@
       <h3 style="margin:0;">📖 操作說明</h3>
       <button id="helpCloseBtn" style="padding:3px 9px;">✕</button>
     </div>
+
+    <div class="help-section">
+      <div class="help-title">首頁可操作</div>
+      <ul>
+        <li>建立房間（名稱、密碼都非強制）、加入房間、查看說明</li>
+      </ul>
+    </div>
+
+    <div class="help-section">
+      <div class="help-title">進入房間後上方可操作</div>
+      <ul>
+        <li>離開房間、查看房間設定</li>
+      </ul>
+    </div>
+
     <div class="help-section">
       <div class="help-title">👑 房主可以做的事</div>
       <ul>
-        <li>建立房間、設定房間密碼、刪除房間</li>
-        <li>在大廳狀態設定「幾條算 BINGO」與「同時 BINGO 模式」（先搶先贏／系統自動判定）</li>
-        <li>點擊左側玩家名字，分配或取消他的順位；一鍵清除所有排序</li>
+        <li>房內左側可設置模式「幾條算 BINGO」與「同時 BINGO 模式」（先搶先贏／系統自動判定）</li>
+        <li>左側可單獨點擊左側玩家名字，分配或取消他的順位；也可一鍵清除所有排序</li>
         <li>按「鎖定」啟動準備流程；所有人準備好後自動開始遊戲</li>
         <li>遊戲中可按「取消鎖定」結束本局；本局結束後可按「開始新的一局」（會自動刷新所有人的號碼、把旁觀者排進順位）</li>
         <li>輪到的玩家離線太久時，可按「跳過此玩家」</li>
@@ -253,6 +276,7 @@
         <li>把任何玩家移出房間（🗑️，適合清掉離線很久的殘留玩家）</li>
       </ul>
     </div>
+
     <div class="help-section">
       <div class="help-title">👤 一般玩家可以做的事</div>
       <ul>
@@ -261,8 +285,7 @@
         <li>準備階段自己按「準備」或「取消」（取消會中止整個準備流程）</li>
         <li>輪到自己時，點擊公共號碼或自己卡片上的號碼叫號（號碼一旦叫出就不能取消，避免爭議）</li>
         <li>隨時可以按「炫耀」分享目前的 BINGO 條數（同一個條數最多炫耀三次）</li>
-        <li>達到設定的 BINGO 條數時：先搶先贏模式會出現「提交 BINGO」按鈕；系統自動判定模式會直接被列入結果</li>
-        <li>隨時可以按「離開房間」</li>
+        <li>達到設定的 BINGO 條數時：先搶先贏模式會出現「提交 BINGO」按鈕，需自行點擊爭搶；系統自動判定模式會直接被列入結果</li>
       </ul>
     </div>
   </div>
@@ -380,7 +403,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.19";
+const APP_VERSION = "v26.8.8.21";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -494,6 +517,14 @@ ruleSettingsWrap.addEventListener("click", (e) => {
   if (state !== "lobby") { showCursorHint(e.clientX, e.clientY, "遊戲進行中，若要更動請開新一局"); }
 });
 
+/* 每位玩家依 uid 固定分配一個顏色，全站（頭像／日誌／號碼球）統一使用 */
+const PLAYER_COLORS = ["#e2543f","#2f8f6f","#3a6bd1","#b8860b","#8e44ad","#c2185b","#0e7c86","#c76b1c","#5c6bc0","#2e7d32"];
+function colorForUid(uid) {
+  if (!uid) return "#6b7280";
+  let hash = 0;
+  for (let i = 0; i < uid.length; i++) hash = (hash * 31 + uid.charCodeAt(i)) >>> 0;
+  return PLAYER_COLORS[hash % PLAYER_COLORS.length];
+}
 function escapeHtml(str) {
   return String(str || "").replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -507,9 +538,11 @@ function randomBoard() {
   }
   return nums.slice(0, 25);
 }
-function pushLog(text, ts) {
+function pushLog(text, ts, uid) {
   if (!currentRoomId) return;
-  push(ref(db, `rooms/${currentRoomId}/logs`), { text, timestamp: ts != null ? ts : Date.now() });
+  push(ref(db, `rooms/${currentRoomId}/logs`), {
+    text, timestamp: ts != null ? ts : Date.now(), uid: uid !== undefined ? uid : myUid
+  });
 }
 function orderedPlayers() {
   return Object.entries(players)
@@ -626,7 +659,7 @@ createRoomBtn.addEventListener("click", async () => {
 async function leaveRoomCleanup(roomId) {
   if (!roomId) return;
   cancelPresence(roomId); // 先取消斷線時的自動標記，避免之後憑空冒出離線幽靈玩家
-  try { push(ref(db, `rooms/${roomId}/logs`), { text: `${myName} 離開房間`, timestamp: Date.now() }); } catch (e) {}
+  try { push(ref(db, `rooms/${roomId}/logs`), { text: `${myName} 離開房間`, timestamp: Date.now(), uid: myUid }); } catch (e) {}
   await remove(ref(db, `rooms/${roomId}/players/${myUid}`));
   await remove(ref(db, `rooms/${roomId}/boards/${myUid}`));
   const remainSnap = await get(ref(db, `rooms/${roomId}/players`));
@@ -909,13 +942,24 @@ function subscribeRoom() {
   unsubs.push(onValue(ref(db, `rooms/${currentRoomId}/logs`), (snap) => {
     const val = snap.val() || {};
     const list = Object.values(val).sort((a, b) => (a.timestamp||0) - (b.timestamp||0)).slice(-300);
-    logBoxEl.textContent = list.map(l => {
+    logBoxEl.innerHTML = "";
+    list.forEach(l => {
       const t = new Date(l.timestamp || Date.now());
       const hh = String(t.getHours()).padStart(2,"0");
       const mm = String(t.getMinutes()).padStart(2,"0");
       const ss = String(t.getSeconds()).padStart(2,"0");
-      return `[${hh}:${mm}:${ss}] ${l.text}`;
-    }).join("\n");
+
+      const row = document.createElement("div");
+      row.className = "log-line";
+      const dot = document.createElement("span");
+      dot.className = "log-dot";
+      dot.style.background = colorForUid(l.uid);
+      const textEl = document.createElement("span");
+      textEl.textContent = `[${hh}:${mm}:${ss}] ${l.text}`;
+      row.appendChild(dot);
+      row.appendChild(textEl);
+      logBoxEl.appendChild(row);
+    });
     logBoxEl.scrollTop = logBoxEl.scrollHeight;
   }));
 
@@ -947,6 +991,8 @@ function renderPlayers() {
     if (isHost && state === "lobby") row.classList.add("clickable");
 
     const icon = document.createElement("span");
+    icon.className = "player-avatar";
+    icon.style.background = colorForUid(uid);
     icon.textContent = uid === roomMeta.hostId ? "👑" : "👤";
     const name = document.createElement("span");
     name.className = "name";
@@ -1166,11 +1212,23 @@ function canClickNumber(n) {
   if (calledNumbers[n]) return false;
   return isMyTurn();
 }
+function applyCalledStyle(el, num) {
+  const called = calledNumbers[num];
+  if (called) {
+    const c = colorForUid(called.by);
+    el.style.background = c;
+    el.style.borderColor = c;
+  } else {
+    el.style.background = "";
+    el.style.borderColor = "";
+  }
+}
 function renderPublicGrid() {
   publicGridEl.innerHTML = "";
   for (let n = 1; n <= 50; n++) {
     const btn = document.createElement("button");
     btn.className = "num-btn" + (calledNumbers[n] ? " active" : "");
+    applyCalledStyle(btn, n);
     btn.textContent = n;
     btn.disabled = !canClickNumber(n);
     btn.addEventListener("click", () => handleNumberClick(n));
@@ -1182,6 +1240,7 @@ function renderMyCard() {
   myBoard.forEach(n => {
     const btn = document.createElement("button");
     btn.className = "num-btn" + (calledNumbers[n] ? " active" : "");
+    applyCalledStyle(btn, n);
     btn.textContent = n;
     btn.disabled = !canClickNumber(n);
     btn.addEventListener("click", () => handleNumberClick(n));
@@ -1275,6 +1334,7 @@ function buildWinnerBoard(boardNums) {
   (boardNums || []).forEach(n => {
     const cell = document.createElement("div");
     cell.className = "num-btn" + (selected.has(n) ? " active" : "");
+    applyCalledStyle(cell, n);
     cell.textContent = n;
     wrap.appendChild(cell);
   });
