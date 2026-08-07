@@ -192,7 +192,7 @@
   .winner-pill-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
   .winner-pill{font-size:12px;padding:5px 12px;border-radius:999px;}
   .winner-pill.open{background:var(--gold);border-color:var(--gold-dark);color:var(--gold-ink);}
-  .winner-board{margin:10px auto 0;grid-template-columns:repeat(5,38px)!important;grid-auto-rows:38px!important;}
+  .winner-board{margin:10px auto 0;justify-content:center;grid-template-columns:repeat(5,38px)!important;grid-auto-rows:38px!important;}
   .winner-board .num-btn{width:38px!important;height:38px!important;font-size:13px!important;}
 </style>
 </head>
@@ -259,20 +259,20 @@
 
     <div id="winnersPanelEl" class="winners-panel hidden"></div>
 
+    <div class="section-label">公共號碼 1–50</div>
+    <div id="publicGridEl" class="public-grid"></div>
+
+    <div class="ticket-divider"></div>
+    <div class="section-label">我的號碼</div>
+    <div id="myCardEl" class="my-card-grid"></div>
+
     <div class="race-row hidden" id="raceRowEl">
       <div class="race-alert">🎉 你已 BINGO！</div>
       <button id="raceSubmitBtn">🏆 提交 BINGO</button>
     </div>
 
-    <div class="section-label">公共號碼 1–50</div>
-    <div id="publicGridEl" class="public-grid"></div>
-
-    <div class="ticket-divider"></div>
-    <div class="section-label">我的卡片</div>
-    <div id="myCardEl" class="my-card-grid"></div>
-
     <div class="card-actions-row">
-      <button id="refreshCardBtn">🔄 刷新我的卡片</button>
+      <button id="refreshCardBtn">🔄 刷新我的號碼</button>
     </div>
     <div class="card-actions-row">
       <button id="bragBtn" disabled>🎊 炫耀</button>
@@ -327,7 +327,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.12";
+const APP_VERSION = "v26.8.8.14";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -886,7 +886,7 @@ clearOrderBtn.addEventListener("click", () => {
 refreshCardBtn.addEventListener("click", () => {
   if (!currentRoomId || (roomMeta.gameState || "lobby") !== "lobby") return;
   set(ref(db, `rooms/${currentRoomId}/boards/${myUid}/numbers`), randomBoard());
-  pushLog(`${myName} 刷新了卡片`);
+  pushLog(`${myName} 刷新了自己的號碼`);
 });
 
 /* ===== 房規設定：幾條算 BINGO / 同時 BINGO 模式（僅房主，僅大廳狀態可改） ===== */
@@ -1082,24 +1082,28 @@ function checkWinCondition(lines) {
   const state = roomMeta.gameState || "lobby";
   const threshold = roomMeta.bingoThreshold || 1;
   const mode = roomMeta.winMode || "race";
-  const reached = state === "playing" && lines >= threshold;
 
   if (mode === "race") {
-    raceRowEl.classList.toggle("hidden", !reached);
-    raceSubmitBtn.classList.toggle("ready", reached);
+    const showRace = state === "playing" && lines >= threshold;
+    raceRowEl.classList.toggle("hidden", !showRace);
+    raceSubmitBtn.classList.toggle("ready", showRace);
     return;
   }
 
-  // 系統自動判定：任何時候只要「自己」的板子在目前已叫出的號碼下達標，就自動登記自己並結束本局
+  // 系統自動判定：只要目前「已叫出的號碼」讓自己達標就登記，
+  // 就算此時 gameState 已經被別人搶先切成 finished（同一批號碼造成的同時達標），也照樣登記，避免漏抓
   raceRowEl.classList.add("hidden");
-  if (state !== "playing") return;
+  if (state !== "playing" && state !== "finished") return;
+  const reached = lines >= threshold;
   if (reached && !myWinRegistered) {
     myWinRegistered = true;
     update(ref(db, `rooms/${currentRoomId}/meta/winners`), {
       [myUid]: { name: myName, lines, board: myBoard }
     });
-    update(ref(db, `rooms/${currentRoomId}/meta`), { gameState: "finished" });
-    pushLog(`🏆 ${myName} 達成 ${lines} 條 BINGO，本局自動結束`);
+    if (state === "playing") {
+      update(ref(db, `rooms/${currentRoomId}/meta`), { gameState: "finished" });
+    }
+    pushLog(`🏆 ${myName} 達成 ${lines} 條 BINGO`);
   }
 }
 
@@ -1179,13 +1183,18 @@ function renderWinnersPanel() {
     entries.forEach(([uid, w]) => {
       const pill = document.createElement("button");
       pill.className = "winner-pill";
-      pill.textContent = `${w.name}（${w.lines} 條）`;
+      pill.dataset.name = w.name;
+      pill.textContent = `${w.name}（我要驗牌）`;
       pill.addEventListener("click", () => {
         const wasOpen = pill.classList.contains("open");
-        winnersPanelEl.querySelectorAll(".winner-pill.open").forEach(el => el.classList.remove("open"));
+        pillRow.querySelectorAll(".winner-pill").forEach(el => {
+          el.classList.remove("open");
+          el.textContent = `${el.dataset.name}（我要驗牌）`;
+        });
         winnersPanelEl.querySelectorAll(".winner-board").forEach(el => el.remove());
         if (!wasOpen) {
           pill.classList.add("open");
+          pill.textContent = `${w.name}（牌沒有問題！）`;
           winnersPanelEl.appendChild(buildWinnerBoard(w.board));
         }
       });
