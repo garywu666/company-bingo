@@ -189,9 +189,10 @@
   .winners-panel{width:100%;max-width:420px;text-align:center;margin:4px 0 14px;padding:12px;background:var(--paper-dim);border-radius:12px;border:1.5px dashed var(--gold-dark);}
   .winners-title{font-size:16px;font-weight:700;margin-bottom:4px;}
   .winners-sub{font-size:13px;color:var(--ink-soft);margin-bottom:8px;}
+  .winner-name{font-weight:700;color:var(--coral-dark);font-size:15px;}
   .winner-pill-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
-  .winner-pill{font-size:12px;padding:5px 12px;border-radius:999px;}
-  .winner-pill.open{background:var(--gold);border-color:var(--gold-dark);color:var(--gold-ink);}
+  .winner-pill{font-size:13px;font-weight:700;padding:6px 14px;border-radius:999px;background:var(--gold);border-color:var(--gold-dark);color:var(--gold-ink);}
+  .winner-pill.open{background:var(--coral);border-color:var(--coral-dark);color:#fff8f5;}
   .winner-board{margin:10px auto 0;justify-content:center;grid-template-columns:repeat(5,38px)!important;grid-auto-rows:38px!important;}
   .winner-board .num-btn{width:38px!important;height:38px!important;font-size:13px!important;}
 </style>
@@ -327,7 +328,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.15";
+const APP_VERSION = "v26.8.8.17";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -415,6 +416,11 @@ function showStartToast() {
   }, 2200);
 }
 
+function escapeHtml(str) {
+  return String(str || "").replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
 function randomBoard() {
   const nums = Array.from({ length: 50 }, (_, i) => i + 1);
   for (let i = nums.length - 1; i > 0; i--) {
@@ -423,9 +429,9 @@ function randomBoard() {
   }
   return nums.slice(0, 25);
 }
-function pushLog(text) {
+function pushLog(text, ts) {
   if (!currentRoomId) return;
-  push(ref(db, `rooms/${currentRoomId}/logs`), { text, timestamp: Date.now() });
+  push(ref(db, `rooms/${currentRoomId}/logs`), { text, timestamp: ts != null ? ts : Date.now() });
 }
 function orderedPlayers() {
   return Object.entries(players)
@@ -1055,15 +1061,16 @@ async function handleNumberClick(num) {
   if (calledNumbers[num]) return; // 已經叫出的號碼不可再變動，避免爭議
   if (!isMyTurn()) return;
 
+  // 先把時間戳記釘死在「送出叫號請求之前」，確保這一定早於這次叫號連帶觸發的任何反應（例如各端的 BINGO 判定日誌）
+  const callTimestamp = Date.now();
   const numRef = ref(db, `rooms/${currentRoomId}/calledNumbers/${num}`);
   const result = await runTransaction(numRef, (curr) => {
     if (curr) return; // 已被別人搶先叫走，放棄
-    return { by: myUid, byName: myName, at: Date.now() };
+    return { by: myUid, byName: myName, at: callTimestamp };
   });
   if (!result.committed) return;
 
-  // 叫號成功要立刻記錄日誌，時間戳記才會早於這次叫號連帶觸發的 BINGO 判定日誌
-  pushLog(`${myName}：${num}`);
+  pushLog(`${myName}：${num}`, callTimestamp);
   // 輪次遞增不用等它完成，不影響後續流程
   runTransaction(ref(db, `rooms/${currentRoomId}/meta/turnIndex`), (v) => (v || 0) + 1);
 }
@@ -1172,7 +1179,7 @@ function renderWinnersPanel() {
     const [, w] = entries[0];
     const sub = document.createElement("div");
     sub.className = "winners-sub";
-    sub.textContent = `${w.name} 搶先達成 ${w.lines} 條 BINGO！`;
+    sub.innerHTML = `<span class="winner-name">${escapeHtml(w.name)}</span> 搶先達成 ${w.lines} 條 BINGO！`;
     winnersPanelEl.appendChild(sub);
     winnersPanelEl.appendChild(buildWinnerBoard(w.board));
   } else {
