@@ -159,17 +159,41 @@
   }
   .start-toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
-  /* 輪到自己時的全螢幕提示邊框 */
-  body.my-turn::after{
-    content:"";
-    position:fixed;inset:0;pointer-events:none;z-index:90;
-    box-shadow:inset 0 0 0 6px var(--coral);
-    animation:turnPulse 1.3s ease-in-out infinite;
+  /* 輪到自己時，號碼大區的呼吸提示框 */
+  .col-center.my-turn{
+    box-shadow:0 0 0 4px var(--coral),0 2px 10px rgba(24,20,44,.06);
+    animation:turnPulseBox 1.3s ease-in-out infinite;
   }
-  @keyframes turnPulse{
-    0%,100%{box-shadow:inset 0 0 0 5px var(--coral);}
-    50%{box-shadow:inset 0 0 0 11px var(--coral);}
+  @keyframes turnPulseBox{
+    0%,100%{box-shadow:0 0 0 4px var(--coral),0 2px 10px rgba(24,20,44,.06);}
+    50%{box-shadow:0 0 0 9px var(--coral),0 2px 10px rgba(24,20,44,.06);}
   }
+
+  /* 房規設定（幾條算 BINGO / 同時 BINGO 模式） */
+  .rule-settings{display:flex;flex-direction:column;gap:4px;padding:8px 9px;background:var(--paper-dim);border-radius:9px;border:1px dashed var(--line);}
+  .rule-settings label{font-size:11px;color:var(--ink-soft);margin-top:2px;}
+  .rule-settings input,.rule-settings select{
+    width:100%;padding:5px 7px;border-radius:6px;border:1.5px solid var(--line);font-size:13px;
+    font-family:inherit;background:#fff;color:var(--ink);
+  }
+  .rule-settings input:disabled,.rule-settings select:disabled{opacity:.6;}
+
+  /* 賓果搶答（先搶先贏模式） */
+  .race-row{display:flex;flex-direction:column;align-items:center;gap:6px;margin:6px 0 10px;}
+  .race-alert{font-size:14px;font-weight:700;color:var(--coral-dark);}
+  #raceSubmitBtn{font-weight:700;}
+  #raceSubmitBtn.ready{background:var(--coral);border-color:var(--coral-dark);color:#fff8f5;animation:raceGlow 1s ease-in-out infinite;}
+  @keyframes raceGlow{0%,100%{transform:scale(1);}50%{transform:scale(1.05);}}
+
+  /* 本局結果面板 */
+  .winners-panel{width:100%;max-width:420px;text-align:center;margin:4px 0 14px;padding:12px;background:var(--paper-dim);border-radius:12px;border:1.5px dashed var(--gold-dark);}
+  .winners-title{font-size:16px;font-weight:700;margin-bottom:4px;}
+  .winners-sub{font-size:13px;color:var(--ink-soft);margin-bottom:8px;}
+  .winner-pill-row{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;}
+  .winner-pill{font-size:12px;padding:5px 12px;border-radius:999px;}
+  .winner-pill.open{background:var(--gold);border-color:var(--gold-dark);color:var(--gold-ink);}
+  .winner-board{margin:10px auto 0;grid-template-columns:repeat(5,38px)!important;grid-auto-rows:38px!important;}
+  .winner-board .num-btn{width:38px!important;height:38px!important;font-size:13px!important;}
 </style>
 </head>
 <body>
@@ -213,16 +237,33 @@
       <h3>玩家排序</h3>
       <button id="lockBtn" class="primary" style="font-size:12px;padding:4px 8px;">鎖定</button>
     </div>
+    <div class="rule-settings">
+      <label>幾條算 BINGO</label>
+      <input id="bingoThresholdInput" type="number" min="1" max="12" value="1" />
+      <label>同時 BINGO 模式</label>
+      <select id="winModeSelect">
+        <option value="race">先搶先贏</option>
+        <option value="auto">系統自動判定</option>
+      </select>
+    </div>
     <button id="clearOrderBtn">清除排序</button>
     <div id="playerListEl"></div>
     <button id="deleteRoomBtn" class="danger hidden">刪除房間</button>
   </div>
 
-  <div class="col col-center">
+  <div class="col col-center" id="numberZoneEl">
     <div class="turn-row">
       <span id="turnHintEl" class="turn-hint idle"></span>
       <button id="skipTurnBtn" class="hidden" style="font-size:12px;padding:4px 8px;">跳過此玩家（離線）</button>
     </div>
+
+    <div id="winnersPanelEl" class="winners-panel hidden"></div>
+
+    <div class="race-row hidden" id="raceRowEl">
+      <div class="race-alert">🎉 你已 BINGO！</div>
+      <button id="raceSubmitBtn">🏆 提交 BINGO</button>
+    </div>
+
     <div class="section-label">公共號碼 1–50</div>
     <div id="publicGridEl" class="public-grid"></div>
 
@@ -286,7 +327,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.11";
+const APP_VERSION = "v26.8.8.12";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -339,9 +380,15 @@ const clearOrderBtn   = $("clearOrderBtn");
 const deleteRoomBtn   = $("deleteRoomBtn");
 const lockBtn         = $("lockBtn");
 const refreshCardBtn  = $("refreshCardBtn");
+const bingoThresholdInput = $("bingoThresholdInput");
+const winModeSelect       = $("winModeSelect");
 
+const numberZoneEl    = $("numberZoneEl");
 const turnHintEl      = $("turnHintEl");
 const skipTurnBtn     = $("skipTurnBtn");
+const winnersPanelEl  = $("winnersPanelEl");
+const raceRowEl       = $("raceRowEl");
+const raceSubmitBtn   = $("raceSubmitBtn");
 const publicGridEl    = $("publicGridEl");
 const bragBtn         = $("bragBtn");
 const bingoCountEl    = $("bingoCountEl");
@@ -483,7 +530,8 @@ createRoomBtn.addEventListener("click", async () => {
 
   await set(ref(db, `rooms/${roomId}/meta`), {
     name, hostId: myUid, hasPassword: !!pwd, passwordHash,
-    createdAt: Date.now(), gameState: "lobby", turnIndex: 0
+    createdAt: Date.now(), gameState: "lobby", turnIndex: 0,
+    bingoThreshold: 1, winMode: "race"
   });
 
   createRoomName.value = ""; createRoomPwd.value = "";
@@ -563,7 +611,7 @@ function showLobby() {
   leaveRoomBtn.classList.add("hidden");
   toggleLobbyBtn.textContent = "收合房間設定";
   roomLabelEl.textContent = "";
-  document.body.classList.remove("my-turn");
+  numberZoneEl.classList.remove("my-turn");
 }
 function showGame() {
   lobbySection.classList.add("hidden");
@@ -692,16 +740,32 @@ function subscribeRoom() {
     if (state === "playing" && prevState && prevState !== "playing") {
       showStartToast();
     }
-    lockBtn.textContent = state === "playing" ? "取消鎖定" : "鎖定";
+    if (state === "lobby") { myWinRegistered = false; }
+
+    lockBtn.disabled = state === "preparing";
+    if (state === "playing") lockBtn.textContent = "取消鎖定";
+    else if (state === "finished") lockBtn.textContent = "開始新的一局";
+    else lockBtn.textContent = "鎖定";
     lockBtn.classList.toggle("hidden", !isHost);
     deleteRoomBtn.classList.toggle("hidden", !isHost);
     clearOrderBtn.disabled = !isHost || state !== "lobby";
     refreshCardBtn.disabled = state !== "lobby";
 
+    if (document.activeElement !== bingoThresholdInput) {
+      bingoThresholdInput.value = roomMeta.bingoThreshold || 1;
+    }
+    if (document.activeElement !== winModeSelect) {
+      winModeSelect.value = roomMeta.winMode || "race";
+    }
+    bingoThresholdInput.disabled = !isHost || state !== "lobby";
+    winModeSelect.disabled = !isHost || state !== "lobby";
+
     renderPlayers();
     renderPublicGrid();
     renderMyCard();
     renderTurnHint();
+    renderWinnersPanel();
+    updateBingoCount();
   }));
 
   unsubs.push(onValue(ref(db, `rooms/${currentRoomId}/players`), (snap) => {
@@ -825,6 +889,23 @@ refreshCardBtn.addEventListener("click", () => {
   pushLog(`${myName} 刷新了卡片`);
 });
 
+/* ===== 房規設定：幾條算 BINGO / 同時 BINGO 模式（僅房主，僅大廳狀態可改） ===== */
+bingoThresholdInput.addEventListener("change", () => {
+  if (!isHost || !currentRoomId || (roomMeta.gameState || "lobby") !== "lobby") return;
+  let v = parseInt(bingoThresholdInput.value, 10);
+  if (!v || v < 1) v = 1;
+  if (v > 12) v = 12;
+  bingoThresholdInput.value = v;
+  update(ref(db, `rooms/${currentRoomId}/meta`), { bingoThreshold: v });
+  pushLog(`${myName} 將 BINGO 條數設定為 ${v} 條`);
+});
+winModeSelect.addEventListener("change", () => {
+  if (!isHost || !currentRoomId || (roomMeta.gameState || "lobby") !== "lobby") return;
+  const v = winModeSelect.value;
+  update(ref(db, `rooms/${currentRoomId}/meta`), { winMode: v });
+  pushLog(`${myName} 將同時 BINGO 模式設定為「${v === "auto" ? "系統自動判定" : "先搶先贏"}」`);
+});
+
 /* ===== 锁定 / 准备流程 ===== */
 lockBtn.addEventListener("click", async () => {
   if (!isHost || !currentRoomId) return;
@@ -846,6 +927,7 @@ lockBtn.addEventListener("click", async () => {
     const updates = {};
     updates[`rooms/${currentRoomId}/meta/gameState`] = "lobby";
     updates[`rooms/${currentRoomId}/meta/turnIndex`] = 0;
+    updates[`rooms/${currentRoomId}/meta/winners`] = null;
     updates[`rooms/${currentRoomId}/calledNumbers`] = null;
     Object.keys(players).forEach(uid => {
       updates[`rooms/${currentRoomId}/players/${uid}/ready`] = null;
@@ -853,6 +935,19 @@ lockBtn.addEventListener("click", async () => {
     });
     await update(ref(db), updates);
     pushLog("房主結束本局並清空公共號碼");
+  } else if (state === "finished") {
+    if (!confirm("開始新的一局？（會清空本局的公共號碼與結果）")) return;
+    const updates = {};
+    updates[`rooms/${currentRoomId}/meta/gameState`] = "lobby";
+    updates[`rooms/${currentRoomId}/meta/turnIndex`] = 0;
+    updates[`rooms/${currentRoomId}/meta/winners`] = null;
+    updates[`rooms/${currentRoomId}/calledNumbers`] = null;
+    Object.keys(players).forEach(uid => {
+      updates[`rooms/${currentRoomId}/players/${uid}/ready`] = null;
+      updates[`rooms/${currentRoomId}/players/${uid}/brag`] = null;
+    });
+    await update(ref(db), updates);
+    pushLog("房主開始新的一局");
   }
 });
 
@@ -903,9 +998,9 @@ function renderTurnHint() {
   const state = roomMeta.gameState || "lobby";
   if (state !== "playing") {
     turnHintEl.className = "turn-hint idle";
-    turnHintEl.textContent = state === "preparing" ? "準備中…" : "尚未開始";
+    turnHintEl.textContent = state === "preparing" ? "準備中…" : state === "finished" ? "🏁 本局結束" : "尚未開始";
     skipTurnBtn.classList.add("hidden");
-    document.body.classList.remove("my-turn");
+    numberZoneEl.classList.remove("my-turn");
     return;
   }
   const uid = currentTurnUid();
@@ -913,7 +1008,7 @@ function renderTurnHint() {
   turnHintEl.className = "turn-hint";
   turnHintEl.textContent = p ? `🌟 ${p.name}，請選號 🌟` : "";
   skipTurnBtn.classList.toggle("hidden", !(isHost && p && p.online !== true));
-  document.body.classList.toggle("my-turn", uid === myUid);
+  numberZoneEl.classList.toggle("my-turn", uid === myUid);
 }
 skipTurnBtn.addEventListener("click", async () => {
   if (!isHost || !currentRoomId) return;
@@ -976,6 +1071,128 @@ function updateBingoCount() {
   const lines = calcBingoLines(myBoard, selected);
   bingoCountEl.textContent = lines;
   updateBragButton(lines);
+  checkWinCondition(lines);
+}
+
+/* ===== 達標判定：幾條算 BINGO + 先搶先贏／系統自動判定 ===== */
+let myWinRegistered = false;
+
+function checkWinCondition(lines) {
+  if (!currentRoomId) return;
+  const state = roomMeta.gameState || "lobby";
+  const threshold = roomMeta.bingoThreshold || 1;
+  const mode = roomMeta.winMode || "race";
+  const reached = state === "playing" && lines >= threshold;
+
+  if (mode === "race") {
+    raceRowEl.classList.toggle("hidden", !reached);
+    raceSubmitBtn.classList.toggle("ready", reached);
+    return;
+  }
+
+  // 系統自動判定：任何時候只要「自己」的板子在目前已叫出的號碼下達標，就自動登記自己並結束本局
+  raceRowEl.classList.add("hidden");
+  if (state !== "playing") return;
+  if (reached && !myWinRegistered) {
+    myWinRegistered = true;
+    update(ref(db, `rooms/${currentRoomId}/meta/winners`), {
+      [myUid]: { name: myName, lines, board: myBoard }
+    });
+    update(ref(db, `rooms/${currentRoomId}/meta`), { gameState: "finished" });
+    pushLog(`🏆 ${myName} 達成 ${lines} 條 BINGO，本局自動結束`);
+  }
+}
+
+raceSubmitBtn.addEventListener("click", async () => {
+  if (!currentRoomId || (roomMeta.gameState || "lobby") !== "playing") return;
+  const selected = new Set(Object.keys(calledNumbers).map(Number));
+  const lines = calcBingoLines(myBoard, selected);
+  const threshold = roomMeta.bingoThreshold || 1;
+  if (lines < threshold) return;
+
+  const result = await runTransaction(ref(db, `rooms/${currentRoomId}/meta/gameState`), (curr) => {
+    if (curr !== "playing") return; // 已經有人搶先送出，放棄
+    return "finished";
+  });
+  if (!result.committed) { alert("已經有人搶先送出了！"); return; }
+
+  await update(ref(db, `rooms/${currentRoomId}/meta/winners`), {
+    [myUid]: { name: myName, lines, board: myBoard }
+  });
+  pushLog(`🏆 ${myName} 搶先送出 BINGO（${lines} 條）！`);
+});
+
+function buildWinnerBoard(boardNums) {
+  const wrap = document.createElement("div");
+  wrap.className = "my-card-grid winner-board";
+  const selected = new Set(Object.keys(calledNumbers).map(Number));
+  (boardNums || []).forEach(n => {
+    const cell = document.createElement("div");
+    cell.className = "num-btn" + (selected.has(n) ? " active" : "");
+    cell.textContent = n;
+    wrap.appendChild(cell);
+  });
+  return wrap;
+}
+
+function renderWinnersPanel() {
+  const state = roomMeta.gameState || "lobby";
+  if (state !== "finished") {
+    winnersPanelEl.classList.add("hidden");
+    winnersPanelEl.innerHTML = "";
+    return;
+  }
+  winnersPanelEl.classList.remove("hidden");
+  winnersPanelEl.innerHTML = "";
+  const winners = roomMeta.winners || {};
+  const entries = Object.entries(winners);
+  const mode = roomMeta.winMode || "race";
+
+  const title = document.createElement("div");
+  title.className = "winners-title";
+  title.textContent = entries.length ? "🏆 本局結果" : "本局已結束";
+  winnersPanelEl.appendChild(title);
+
+  if (!entries.length) {
+    const none = document.createElement("div");
+    none.className = "winners-sub";
+    none.textContent = "沒有玩家達成設定的 BINGO 條數";
+    winnersPanelEl.appendChild(none);
+    return;
+  }
+
+  if (mode === "race") {
+    const [, w] = entries[0];
+    const sub = document.createElement("div");
+    sub.className = "winners-sub";
+    sub.textContent = `${w.name} 搶先達成 ${w.lines} 條 BINGO！`;
+    winnersPanelEl.appendChild(sub);
+    winnersPanelEl.appendChild(buildWinnerBoard(w.board));
+  } else {
+    const sub = document.createElement("div");
+    sub.className = "winners-sub";
+    sub.textContent = "點名字可查看該玩家的卡片";
+    winnersPanelEl.appendChild(sub);
+
+    const pillRow = document.createElement("div");
+    pillRow.className = "winner-pill-row";
+    entries.forEach(([uid, w]) => {
+      const pill = document.createElement("button");
+      pill.className = "winner-pill";
+      pill.textContent = `${w.name}（${w.lines} 條）`;
+      pill.addEventListener("click", () => {
+        const wasOpen = pill.classList.contains("open");
+        winnersPanelEl.querySelectorAll(".winner-pill.open").forEach(el => el.classList.remove("open"));
+        winnersPanelEl.querySelectorAll(".winner-board").forEach(el => el.remove());
+        if (!wasOpen) {
+          pill.classList.add("open");
+          winnersPanelEl.appendChild(buildWinnerBoard(w.board));
+        }
+      });
+      pillRow.appendChild(pill);
+    });
+    winnersPanelEl.appendChild(pillRow);
+  }
 }
 function updateBragButton(lines) {
   if (lines === undefined) {
