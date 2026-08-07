@@ -260,7 +260,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.5";
+const APP_VERSION = "v26.8.8.6";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -709,7 +709,6 @@ function renderPlayers() {
     return (a[1].name || "").localeCompare(b[1].name || "");
   });
   const state = roomMeta.gameState || "lobby";
-  const circled = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮";
 
   entries.forEach(([uid, p]) => {
     const row = document.createElement("div");
@@ -723,7 +722,7 @@ function renderPlayers() {
     name.textContent = (p.name || "(未命名)") + (p.online !== true ? "（離線）" : "");
     const badge = document.createElement("span");
     badge.className = "order-badge";
-    badge.textContent = p.order ? (circled[p.order-1] || String(p.order)) : "";
+    badge.textContent = p.order ? String(p.order) : "";
 
     row.appendChild(icon); row.appendChild(name); row.appendChild(badge);
 
