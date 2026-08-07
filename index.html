@@ -260,7 +260,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.6";
+const APP_VERSION = "v26.8.8.7";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -532,12 +532,16 @@ function showGame() {
   toggleLobbyBtn.textContent = "顯示房間設定";
 }
 toggleLobbyBtn.addEventListener("click", () => {
+  if (!currentRoomId) { listenRoomList(); return; } // 純大廳狀態，永遠保持可見＋即時
   const hiding = !lobbySection.classList.contains("hidden");
-  if (hiding) { lobbySection.classList.add("hidden"); toggleLobbyBtn.textContent = "顯示房間設定"; }
-  else {
+  if (hiding) {
+    lobbySection.classList.add("hidden");
+    toggleLobbyBtn.textContent = "顯示房間設定";
+    if (roomListUnsub) { roomListUnsub(); roomListUnsub = null; }
+  } else {
     lobbySection.classList.remove("hidden");
     toggleLobbyBtn.textContent = "收合房間設定";
-    if (!currentRoomId) listenRoomList();
+    listenRoomList();
   }
 });
 
