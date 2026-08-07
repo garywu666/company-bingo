@@ -426,7 +426,7 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 /* ===== 版本號：每次修改都會更新，方便確認 GitHub 上是不是最新版 ===== */
-const APP_VERSION = "v26.8.8.22";
+const APP_VERSION = "v26.8.8.23";
 document.getElementById("versionTag").textContent = APP_VERSION;
 console.log("Company Bingo", APP_VERSION);
 
@@ -568,9 +568,12 @@ function randomBoard() {
 }
 function pushLog(text, ts, uid) {
   if (!currentRoomId) return;
-  push(ref(db, `rooms/${currentRoomId}/logs`), {
-    text, timestamp: ts != null ? ts : Date.now(), uid: uid !== undefined ? uid : myUid
-  });
+  const time = ts != null ? ts : Date.now();
+  const logRef = push(ref(db, `rooms/${currentRoomId}/logs`));
+  const updates = {};
+  updates[`rooms/${currentRoomId}/logs/${logRef.key}`] = { text, timestamp: time, uid: uid !== undefined ? uid : myUid };
+  updates[`rooms/${currentRoomId}/meta/lastActivityAt`] = Date.now(); // 記錄最後活動時間，供閒置房間自動清理判斷
+  update(ref(db), updates);
 }
 function orderedPlayers() {
   return Object.entries(players)
@@ -631,11 +634,22 @@ async function tryAutoRejoin() {
 let roomListUnsub = null;
 function listenRoomList() {
   if (roomListUnsub) return;
+  const STALE_ROOM_MS = 30 * 60 * 1000; // 所有玩家離線滿 30 分鐘，順手清理閒置房間
   roomListUnsub = onValue(ref(db, "rooms"), (snap) => {
     const val = snap.val() || {};
     roomListEl.innerHTML = "";
+    const now = Date.now();
     const entries = Object.entries(val)
       .filter(([, r]) => r.meta)
+      .filter(([roomId, r]) => {
+        const lastActivity = r.meta.lastActivityAt || r.meta.createdAt || 0;
+        const anyOnline = Object.values(r.players || {}).some(p => p.online === true);
+        if (!anyOnline && (now - lastActivity) > STALE_ROOM_MS) {
+          remove(ref(db, `rooms/${roomId}`)).catch(() => {});
+          return false; // 這輪畫面就先不顯示，等刪除完成後列表會自動更新
+        }
+        return true;
+      })
       .sort((a, b) => (a[1].meta.createdAt || 0) - (b[1].meta.createdAt || 0));
 
     if (!entries.length) {
@@ -675,7 +689,7 @@ createRoomBtn.addEventListener("click", async () => {
 
   await set(ref(db, `rooms/${roomId}/meta`), {
     name, hostId: myUid, hasPassword: !!pwd, passwordHash,
-    createdAt: Date.now(), gameState: "lobby", turnIndex: 0,
+    createdAt: Date.now(), lastActivityAt: Date.now(), gameState: "lobby", turnIndex: 0,
     bingoThreshold: 1, winMode: "race"
   });
 
