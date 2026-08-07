@@ -496,10 +496,10 @@ function setupPresence(roomId) {
 function maybeClaimHost() {
   if (!currentRoomId || !roomMeta.hostId) return;
   const hostPlayer = players[roomMeta.hostId];
-  const iAmOnline = players[myUid] && players[myUid].online !== false;
+  const iAmOnline = players[myUid] && players[myUid].online === true;
   if (!iAmOnline) return;
-  if (hostPlayer && hostPlayer.online === false) {
-    const onlineList = Object.entries(players).filter(([, p]) => p.online !== false);
+  if (hostPlayer && hostPlayer.online !== true) {
+    const onlineList = Object.entries(players).filter(([, p]) => p.online === true);
     if (!onlineList.length) return;
     onlineList.sort((a, b) => (a[1].joinedAt || 0) - (b[1].joinedAt || 0));
     const candidateUid = onlineList[0][0];
@@ -602,14 +602,14 @@ function renderPlayers() {
 
   entries.forEach(([uid, p]) => {
     const row = document.createElement("div");
-    row.className = "player-row" + (uid === myUid ? " me" : "") + (p.online === false ? " offline" : "");
+    row.className = "player-row" + (uid === myUid ? " me" : "") + (p.online !== true ? " offline" : "");
     if (isHost && state === "lobby") row.classList.add("clickable");
 
     const icon = document.createElement("span");
     icon.textContent = uid === roomMeta.hostId ? "👑" : "👤";
     const name = document.createElement("span");
     name.className = "name";
-    name.textContent = (p.name || "(未命名)") + (p.online === false ? "（離線）" : "");
+    name.textContent = (p.name || "(未命名)") + (p.online !== true ? "（離線）" : "");
     const badge = document.createElement("span");
     badge.className = "order-badge";
     badge.textContent = p.order ? (circled[p.order-1] || String(p.order)) : "";
@@ -723,7 +723,7 @@ function renderTurnHint() {
   const p = uid && players[uid];
   turnHintEl.className = "turn-hint";
   turnHintEl.textContent = p ? `🌟 ${p.name}，請選號 🌟` : "";
-  skipTurnBtn.classList.toggle("hidden", !(isHost && p && p.online === false));
+  skipTurnBtn.classList.toggle("hidden", !(isHost && p && p.online !== true));
 }
 skipTurnBtn.addEventListener("click", async () => {
   if (!isHost || !currentRoomId) return;
